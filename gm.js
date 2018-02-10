@@ -1,11 +1,11 @@
 /* ------------------------------------------ //
 					GM-JS
-			Version: 0.2.2
+			Version: 0.2.3
 			Author: jmscreator
 			License: Free to use
 			
 	Current Progress:
-		Object mask currently being worked on
+		
 // ------------------------------------------- */
 
 var GMJS = new (function(){'use strict';
@@ -191,6 +191,7 @@ var GMJS = new (function(){'use strict';
 				t.sprite.scale.y = t.yscale;
 				t.sprite.alpha = t.image_alpha;
 				t.sprite.rotation = (t.image_angle)*Math.PI/180;
+				t.mask = (obj.mask)?{x:obj.mask.x+t.x, y:obj.mask.y+t.y, width:obj.mask.w, height:obj.mask.h}:{x:t.x, y:t.y, width:t.sprite.width, height:t.sprite.height};
 			}
 			
 			
@@ -204,6 +205,7 @@ var GMJS = new (function(){'use strict';
 			t.yprevious = t.y;
 			t.image_angle = 0;
 			t.image_alpha = 1;
+			t.mask = obj.mask?{}:null;
 			t.xscale = 1;
 			t.yscale = 1;
 			t.collision_objects = [];
@@ -293,11 +295,11 @@ var GMJS = new (function(){'use strict';
 				}
 			}
 			t.collision_object = function(scope, o, code){
-				var t = this;
+				var tt = this;
 				o = get_object(o);
-				t._run_step = function(){
+				tt._run_step = function(){
 					_with(o, function(ii){
-						if(checkCollision((t.mask == {})?scope.sprite:t.mask, ii.sprite)) code(scope, ii);
+						if(checkCollision(scope.mask, ii.mask)) code(scope, ii);
 					});
 				}
 			}
@@ -313,7 +315,7 @@ var GMJS = new (function(){'use strict';
 			t.obj_destroyed = ('destroyed' in args)?args.destroyed:((t.parent)?t.parent.obj_destroyed:function(){})
 			t.alarms = ('alarms' in args)?args.alarms:((t.parent)?t.parent.alarms:[]);
 			t.collision = ('collision' in args)?args.collision:((t.parent)?t.parent.collision:[]);
-			t.mask = ('mask' in args)?args.mask:((t.parent)?t.parent.mask:{});
+			t.mask = ('mask' in args)?args.mask:((t.parent)?t.parent.mask:null);
 			//////-------------------------------------------//////
 			
 			if(t.parent){
