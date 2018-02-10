@@ -16,5 +16,7 @@ Nimble.js (HID input library)\*<br>
 <br>
 <br>
 <p>
-View the example index.html file,
+Read the included example index.html file for help.
+<br>
+There is currently no documentation on how to use this. Please bear with its beginning development stages.
 </p>
