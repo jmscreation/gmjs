@@ -173,7 +173,15 @@ var GMJS = new (function(){'use strict';
 			o = get_object(o);
 			var list = [];
 			_with(o, function(ii){
-				if(checkCollision(t.sprite, ii.sprite)) list.push(ii);
+				if(checkCollision(t.mask, ii.mask)) list.push(ii);
+			});
+			return list.length?list:false;
+		}
+		var collision_point = function(xx, yy, o){
+			o = get_object(o);
+			var list = [];
+			_with(o, function(ii){
+				if(checkCollision({x:xx, y:yy, width:1, height:1}, ii.mask)) list.push(ii);
 			});
 			return list.length?list:false;
 		}
@@ -388,7 +396,9 @@ var GMJS = new (function(){'use strict';
 			This.object = object;
 			This.room = room;
 			This.collision_with = collision_with;
+			This.collision_point = collision_point;
 			This.With = _with;
+			This.get_object = get_object;
 			This.keyboard = keyboard;
 			This.mouse = mouse;
 			This.mouse_click = mouse_click;
