@@ -1,11 +1,11 @@
 /* ------------------------------------------ //
 					GM-JS
-			Version: 0.2.4
+			Version: 0.2.5
 			Author: jmscreator
 			License: Free to use
 			
 	Current Progress:
-		
+		Cleaning up code
 // ------------------------------------------- */
 
 var GMJS = new (function(){'use strict';
@@ -42,7 +42,6 @@ var GMJS = new (function(){'use strict';
 		return true;
 	}
 	
-	var create_text_style, create_text;
 	This.StartGameEngine = function(Params){
 		if(_GameEngineStarted) return console.error('GameEngine Is Running!');
 		_GameEngineStarted = true;
@@ -105,10 +104,9 @@ var GMJS = new (function(){'use strict';
 		var _DepthChanged = false;
 		var room = app.screen;
 		
-		create_text_style = function(style){
+		var create_text_style = function(style){
 			return new TextStyle(style);
-		}
-		
+		},
 		create_text = function(str, x, y, style){
 			str = str || '';
 			style = style || {};
@@ -121,9 +119,8 @@ var GMJS = new (function(){'use strict';
 			app.stage.addChild(_text);
 			_DepthChanged = true;
 			return _text;
-		}
-		
-		var get_object = function(o){
+		},
+		get_object = function(o){
 			if(typeof(o) == 'object'){
 				return o;
 			}
@@ -133,34 +130,54 @@ var GMJS = new (function(){'use strict';
 				}
 			}
 			return false;
-		}
-		var keyboard_check_pressed = function(key){
-			return key in keyboard.pressed;
-		}
-		var keyboard_check_released = function(key){
-			return key in keyboard.released;
-		}
-		var mouse_check = function(mb){
+		},
+		get_instances = function(obj){
+			var l = [];
+			function recurse(_obj){
+				l = l.concat(_obj.instances);
+				for(var child in _obj.children){
+					recurse(_obj.children[child]);
+				}
+			}
+			recurse(obj);
+			return l;
+		},
+		get_instance = function(obj, id){
+			var l = get_instances(obj);
+			return (!!l[id])?l[id]:false;
+		},
+		_with = function(obj, scope){
+			var l = get_instances(obj);
+			for(var ii in l){
+				if(scope(l[ii]) == false) break;
+			}
+		},
+		keyboard_check_pressed = function(key){
+			return !!keyboard.pressed[key];
+		},
+		keyboard_check_released = function(key){
+			return !!keyboard.released[key];
+		},
+		mouse_check = function(mb){
 			if(mb != 'left' && mb != 'right' && mb != 'middle') return false;
 			return mouse[mb];
-		}
-		var mouse_check_pressed = function(mb){
+		},
+		mouse_check_pressed = function(mb){
 			mb = mb||'left';
-			return mb in mouse.pressed;
-		}
-		var mouse_check_released = function(mb){
+			return !!mouse.pressed[mb];
+		},
+		mouse_check_released = function(mb){
 			mb = mb||'left';
-			return mb in mouse.released;
-		}
-		var mouse_click = function(t, op, mb){
+			return !!mouse.released[mb];
+		},
+		mouse_click = function(t, op, mb){
 			mb = mb||'left';
 			op = op || mouse_check;
 			if(op(mb)){
 				return (checkCollision({x:mouse.x, y:mouse.y, width:1, height:1}, t.sprite));
 			}
-		}
-
-		var checkCollision = function(r1, r2) {
+		},
+		checkCollision = function(r1, r2) {
 			var widths, heights, vx, vy;
 			if(r1 === r2) return false;
 			r1.centerX = r1.x; 
@@ -178,27 +195,30 @@ var GMJS = new (function(){'use strict';
 			widths = r1.halfWidth + r2.halfWidth;
 			heights = r1.halfHeight + r2.halfHeight;
 			return (Math.abs(vx) < widths && Math.abs(vy) < heights);
-		};
-		var collision_with = function(t, o){
+		},
+		collision_with = function(t, o){
 			o = get_object(o);
 			var list = [];
 			_with(o, function(ii){
 				if(checkCollision(t.mask, ii.mask)) list.push(ii);
 			});
 			return list.length?list:false;
-		}
-		var collision_point = function(xx, yy, o){
+		},
+		collision_point = function(xx, yy, o){
 			o = get_object(o);
 			var list = [];
 			_with(o, function(ii){
 				if(checkCollision({x:xx, y:yy, width:1, height:1}, ii.mask)) list.push(ii);
 			});
 			return list.length?list:false;
-		}
-		var instance = function(obj, x, y){
+		},
+		instance = function(obj, x, y){
 			var t = this;
-			var _destroy = false;
-			var depth = obj.depth;
+			//Local vars for instance
+			var _destroy = false,
+			depth = obj.depth,
+			image_alpha = 1;
+			
 			var updateLocalAsset = function(){
 				t.graphics.clear();
 				t.sprite.zIndex = depth;
@@ -206,7 +226,7 @@ var GMJS = new (function(){'use strict';
 				t.sprite.y = t.y;
 				t.sprite.scale.x = t.xscale;
 				t.sprite.scale.y = t.yscale;
-				t.sprite.alpha = t.image_alpha;
+				t.sprite.alpha = image_alpha;
 				t.sprite.rotation = (t.image_angle)*Math.PI/180;
 				t.mask = (obj.mask)?{x:obj.mask.x+t.x, y:obj.mask.y+t.y, width:obj.mask.w, height:obj.mask.h}:{x:t.x, y:t.y, width:t.sprite.width, height:t.sprite.height};
 			}
@@ -214,6 +234,7 @@ var GMJS = new (function(){'use strict';
 			
 			Object.defineProperty(t, 'object_index', {value:obj, writeable:false});
 			Object.defineProperty(t, 'depth', {get:function(){return depth;}, set:function(x){_DepthChanged = (depth != x);depth = x;updateLocalAsset();}});
+			Object.defineProperty(t, 'image_alpha', {get:function(){return image_alpha;}, set:function(x){image_alpha = Math.max(Math.min(x, 1), 0);}});			
 			
 			t.active = true;
 			t.x = x||0;
@@ -221,7 +242,6 @@ var GMJS = new (function(){'use strict';
 			t.xprevious = t.x;
 			t.yprevious = t.y;
 			t.image_angle = 0;
-			t.image_alpha = 1;
 			t.mask = obj.mask?{}:null;
 			t.xscale = 1;
 			t.yscale = 1;
@@ -295,9 +315,8 @@ var GMJS = new (function(){'use strict';
 			_DepthChanged = true;
 			obj.obj_create(t)//Creation Event
 			updateLocalAsset();//Complete information based no creation event
-		}
-
-		var object = function(args){
+		},
+		object = function(args){
 			var t = this;
 			t.instances = [];
 			t.children = [];
@@ -347,27 +366,10 @@ var GMJS = new (function(){'use strict';
 				return ii;
 			}
 			t.instance_number = function(){
-				return _get_instances(t).length;
+				return get_instances(t).length;
 			}
 		}
-		var _get_instances = function(obj){
-			var l = [];
-			function recurse(_obj){
-				l = l.concat(_obj.instances);
-				for(var child in _obj.children){
-					recurse(_obj.children[child]);
-				}
-			}
-			recurse(obj);
-			return l;
-		}
-		var _with = function(obj, scope){
-			var l = _get_instances(obj);
-			for(var ii in l){
-				if(scope(l[ii]) == false) break;
-			}
-		}
-
+		
 		function mainLoop(delta){
 			for(var o in object_table){
 				var it = object_table[o].instances;
@@ -410,6 +412,7 @@ var GMJS = new (function(){'use strict';
 			This.collision_point = collision_point;
 			This.With = _with;
 			This.get_object = get_object;
+			This.get_instance = get_instance;
 			This.keyboard = keyboard;
 			This.mouse = mouse;
 			This.mouse_click = mouse_click;
