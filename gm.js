@@ -1,6 +1,6 @@
 /* ------------------------------------------ //
 					GM-JS
-			Version: 0.2.3
+			Version: 0.2.4
 			Author: jmscreator
 			License: Free to use
 			
@@ -41,11 +41,21 @@ var GMJS = new (function(){'use strict';
 		}
 		return true;
 	}
+	
 	var create_text_style, create_text;
-	This.StartGameEngine = function(GameStart, Images){
+	This.StartGameEngine = function(Params){
 		if(_GameEngineStarted) return console.error('GameEngine Is Running!');
 		_GameEngineStarted = true;
-		var app = new Application({width:512, height:400});
+		
+		var GameStart = Params['onStart']||function(){},
+		GameEnd = Params['onEnd'] || function(){},
+		Images = Params['images'] || [],
+		View = Params['view'] || {};
+		
+		View.width = ('width' in View)?View.width:512;
+		View.height = ('height' in View)?View.height:512;
+		
+		var app = new Application(View);
 		app.stage.updateLayersOrder = function () {
 			app.stage.children.sort(function(a,b) {
 				a.zIndex = a.zIndex || 0;
@@ -104,7 +114,7 @@ var GMJS = new (function(){'use strict';
 			style = style || {};
 			var _text = new Text(str, style);
 			_text.zIndex = 0;
-			Object.defineProperty(_text, 'depth', {set:function(x){_text.zIndex = x;}, get:function(){_DepthChanged = true;return _text.zIndex;}});
+			Object.defineProperty(_text, 'depth', {set:function(x){_DepthChanged = (_text.zIndex != x);_text.zIndex = x;}, get:function(){return _text.zIndex;}});
 			_text.align = function(a, b){b=b||1;switch(a){case 'center':_text.anchor.x = 0.5;_text.anchor.y = 0.5;return;case 'left':_text.anchor.x = 1-b/100;return;case 'right':_text.anchor.x = b/100;return;case 'top':_text.anchor.y = 1-b/100;case 'bottom':_text.anchor.y = b/100;}};
 			_text.x = x || 0;
 			_text.y = y || 0;
@@ -192,7 +202,6 @@ var GMJS = new (function(){'use strict';
 			var updateLocalAsset = function(){
 				t.graphics.clear();
 				t.sprite.zIndex = depth;
-				t.graphics.zIndex = depth - 1;
 				t.sprite.x = t.x;
 				t.sprite.y = t.y;
 				t.sprite.scale.x = t.xscale;
@@ -204,7 +213,7 @@ var GMJS = new (function(){'use strict';
 			
 			
 			Object.defineProperty(t, 'object_index', {value:obj, writeable:false});
-			Object.defineProperty(t, 'depth', {get:function(){return depth;}, set:function(x){depth = x;updateLocalAsset();_DepthChanged = true;}});
+			Object.defineProperty(t, 'depth', {get:function(){return depth;}, set:function(x){_DepthChanged = (depth != x);depth = x;updateLocalAsset();}});
 			
 			t.active = true;
 			t.x = x||0;
@@ -274,6 +283,8 @@ var GMJS = new (function(){'use strict';
 			t.sprite = new Sprite((obj.image == null)?'':texture);
 			t.sprite.renderable = false;
 			t.graphics = new Graphics();
+			t.graphics.zIndex = depth;
+			Object.defineProperty(t.graphics, 'depth', {get:function(){return t.graphics.zIndex;}, set:function(x){_DepthChanged = (t.graphics.zIndex != x);t.graphics.zIndex = x;}});
 			t.sprite.anchor.x = 0.5;
 			t.sprite.anchor.y = 0.5;
 			updateLocalAsset();//Set info

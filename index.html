@@ -21,11 +21,29 @@ window.onload = function(){'use strict';
 	{name:'spr_bullet', path:'images/bullet.png'}];
 	
 	if(typeof(GMJS) == 'object'){
-		GMJS.StartGameEngine(GameInit, Sprites);
+		GMJS.StartGameEngine({
+			onStart:GameInit,
+			images:Sprites,
+			view:{width:512, height:416}
+		});
 	} else return console.error('GMJS not found');
 	
 	var g = GMJS;
 	var Cont, Enemy, TreasureBox, Character, Wall, Bullet, CollisionObjects, GatherObjects;
+	
+	function draw_bar(g, x, y, color, life, full, width){
+		width = width || 32;
+		full = full || 100;
+		color.border = ('border' in color)?color.border:0XFFFFFF;
+		color.fill = ('fill' in color)?color.fill:0X000000;
+		g.lineStyle(1, color.border);
+		g.drawRect(x - width/2, y, width, 8);
+		g.lineStyle(0);
+		g.beginFill(color.fill);
+		g.drawRect(x - width/2, y, width*life/full, 8);
+		g.endFill();
+	}
+	
 	function GameInit(){
 		//Setup Fonts
 		var PlayerFont = g.create_text_style({fontFamily: 'Arial', fontSize: 10, fill:0xFFFFFF});
@@ -33,8 +51,9 @@ window.onload = function(){'use strict';
 		Cont = new g.object({
 				name:'controller',
 				creation:function(t){
-					t.draw_kills = g.create_text('', 0, 0, PlayerFont);
-					t.draw_kills.align('center');
+					t.draw_kills = g.create_text('', 8, 8, PlayerFont);
+						t.draw_kills.align('top', 50);
+						t.draw_kills.depth = -2;
 					t.create_chest.time = 60 + Math.random()*100;
 					t.create_player.time = 50;//create player first
 					t.create_enemy.time = 100;
@@ -42,10 +61,11 @@ window.onload = function(){'use strict';
 					t.player = null;
 				},
 				step:function(t){
+					t.graphics.beginFill(0X444444);
+					t.graphics.drawRect(0, 0, 128, 16);
 					if(t.player){
-						t.draw_kills.text = 'Kills: ' + t.kills.toString();
-						t.draw_kills.x = t.player.x;
-						t.draw_kills.y = t.player.y - 22;
+						t.draw_kills.text = 'Kills: ' + t.kills.toString() + '  Points: '+t.player.points.toString();
+						
 					}
 				},
 				alarms:[
@@ -98,6 +118,7 @@ window.onload = function(){'use strict';
 		TreasureBox = new g.object({
 				name:'TreasureBox',
 				image:'spr_treasure',
+				mask:{x:0, y:0, w:8, h:8},
 				creation:function(t){
 					t.depth = g.room.height - t.y;
 					t.image_alpha = 0;
@@ -111,7 +132,6 @@ window.onload = function(){'use strict';
 			image:'spr_enemy',
 			name:'Enemy',
 			parent:GatherObjects,
-			depth:-3,
 			creation:function(t){
 				t.life = 100;
 				t.xscale = 0.5;
@@ -132,21 +152,16 @@ window.onload = function(){'use strict';
 			},
 			step:function(t){
 				t.depth = g.room.height - t.y;
+				t.graphics.depth = t.depth - 1;
+				if(t.image_alpha >= 1){
+					draw_bar(t.graphics, t.x, t.y - t.sprite.height/2 - 10, {border:0x600000, fill:0XDD0000}, t.life);
+				}
+				
 				if(t.image_alpha < 1) t.image_alpha += 0.1;
 				if(t.up){t.y -= t.spd;}
 				if(t.down){t.y += t.spd;}
 				if(t.left){t.x -= t.spd;}
 				if(t.right){t.x += t.spd;}
-			},
-			end_step:function(t){
-				if(t.image_alpha >= 1){
-					t.graphics.lineStyle(1, 0x600000);
-					t.graphics.drawRect(t.x-16, t.y-t.sprite.height/2-10, 32, 8);
-					t.graphics.lineStyle(0);
-					t.graphics.beginFill(0XFF0000);
-					t.graphics.drawRect(t.x-16, t.y-t.sprite.height/2-10, 32*t.life/100, 8);
-					t.graphics.endFill();
-				}
 			},
 			alarms:[
 				{name:'reset_motion', code:function(t){
@@ -187,21 +202,24 @@ window.onload = function(){'use strict';
 			parent:GatherObjects,
 			creation:function(t){
 				t.points = 0;
-				t.text = g.create_text('Game', 0, 0, PlayerFont);
-				t.text.align('center');
-				t.text.depth = -1;
+				t.health = 100;
+				t.shield = 50; //steps for invincibility after hit
+				t.reset_hit_rate = function(){t.image_alpha = t.hit;t.hit = false;t.flash = 0;t.hit_rate = Math.round(t.shield);}
+				t.reset_hit_rate();
 				t.spd = 3;
 				t.xscale = 0.5;
 				t.yscale = 0.5;
 				t.up = false;t.down = false;t.left = false;t.right = false;
-				t.last_dir = [0,1,0,0];
+				t.last_dir = [0,1,0,0]; //[left, right, up, down]
 			},
 			step:function(t){
-				t.text.x = t.x;
-				t.text.y = t.y - 32;
-				t.text.text = 'Points: '+t.points.toString();
-				
+				if(t.hit){
+					t.image_alpha = t.flash;
+				}
 				t.depth = g.room.height - t.y;
+				t.graphics.depth = t.depth - 1;
+				draw_bar(t.graphics, t.x, t.y - t.sprite.height/2 - 10, {border:0x007700, fill:(t.health<60)?((t.health<30)?((t.health<15)?0X770000:0XDD0000):0XDDDD00):0X00DD00}, t.health);
+				draw_bar(t.graphics, t.x, t.y - t.sprite.height/2 - 20, {border:0x005959, fill:0X0000F1}, t.shield, 50);
 				t.up = g.keyboard.up;
 				t.down = (g.keyboard.down && !t.up);
 				t.left = g.keyboard.left;
@@ -224,6 +242,21 @@ window.onload = function(){'use strict';
 					if(t.down && other.y > t.y && Math.abs(t.x - other.x) < other.sprite.width-8) t.y = t.yprevious;
 				}}, {object:TreasureBox, code:function(t, other){
 					if(other.image_alpha >= 1) t.points ++;
+				}},
+				{object:Enemy, code:function(t, other){
+					if(!t.hit){
+						t.hit = true;
+						t.hit_flash.time = 5;
+						t.health-=1 + 4*Math.random();
+						t.shield -= Math.random();
+					}
+				}}
+			],
+			alarms:[
+				{name:'hit_flash', code:function(t){
+					if(!t.hit_rate) return t.reset_hit_rate();
+					t.flash = !t.flash;
+					t.hit_flash.time = Math.max((t.hit_rate--)/10, 1);
 				}}
 			]
 		});
