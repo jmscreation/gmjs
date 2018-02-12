@@ -1,12 +1,11 @@
 /* ------------------------------------------ //
 					GM-JS
-			Version: 0.2.6
+			Version: 0.2.7
 			Author: jmscreator
 			License: Free to use
 			
 	Current Progress:
 		Cleaning up code
-		Adding Animation
 // ------------------------------------------- */
 
 var GMJS = new (function(){'use strict';
@@ -77,22 +76,28 @@ var GMJS = new (function(){'use strict';
 				if('tile' in i){
 					if(!createFrame(tex, i.tile)) console.error('Failed creating frame for - '+i.name);
 				}
-				/* // Not Finished
+				
 				if('animated' in i){
-					i.texture = [];
+					tex = [];
 					var j = i.animated;
-					var count = j.count,
-					columns = j.columns,
-					w = j.w,h = j.h,
-					xoff = j.xoff,yoff = j.yoff,
-					xsep = j.xsep,ysep = j.ysep;
+					var count = j.count || 0,
+					columns = j.columns || 1,
+					w = j.w || 0,h = j.h || 0,
+					xoff = j.xoff || 0,yoff = j.yoff || 0,
+					xsep = j.xsep || 0,ysep = j.ysep || 0;
+					
+					console.log(xoff, yoff, xsep, ysep);
 					
 					for(var t = 0; t < count; t++){
-						i.texture.push(new Texture(BaseTexture.fromImage(i.path))); // Animation Textures
+						var tx = new Texture(BaseTexture.fromImage(i.path)); // Animation Textures
+						tex.push(tx);
+						var xx = (t % columns),
+						row = Math.floor(t / columns),
+						tile = {x:(xoff+w*xx+xsep*(!!xx)), y:(yoff+h*row+ysep*(!!t)*row), w:w, h:h};
+						console.log(xx, tile);
+						createFrame(tx, tile);
 					}
-					
-					
-				}*/
+				}
 				i.texture = tex;
 			}
 		}
@@ -241,36 +246,24 @@ var GMJS = new (function(){'use strict';
 			//Local vars for instance
 			var _destroy = false,
 			depth = obj.depth,
-			image_alpha = 1;
+			image_alpha = 1,
+			image_single = 0,
+			image_angle = 0,
+			xscale = 1,yscale = 1;
 			
 			var updateLocalAsset = function(){
 				t.graphics.clear();
-				t.sprite.zIndex = depth;
-				t.sprite.x = t.x;
-				t.sprite.y = t.y;
-				t.sprite.scale.x = t.xscale;
-				t.sprite.scale.y = t.yscale;
-				t.sprite.alpha = image_alpha;
-				t.sprite.rotation = (t.image_angle)*Math.PI/180;
 				t.mask = (obj.mask)?{x:obj.mask.x+t.x, y:obj.mask.y+t.y, width:obj.mask.w, height:obj.mask.h}:{x:t.x, y:t.y, width:t.sprite.width, height:t.sprite.height};
 			}
 			
-			
 			Object.defineProperty(t, 'object_index', {value:obj, writeable:false});
-			Object.defineProperty(t, 'depth', {get:function(){return depth;}, set:function(x){_DepthChanged = (depth != x);depth = x;updateLocalAsset();}});
-			Object.defineProperty(t, 'image_alpha', {get:function(){return image_alpha;}, set:function(x){image_alpha = Math.max(Math.min(x, 1), 0);}});			
+			Object.defineProperty(t, 'depth', {get:function(){return depth;}, set:function(x){_DepthChanged = (depth != x);depth = x;t.sprite.zIndex = depth;}});
 			
 			t.active = true;
-			t.x = x||0;
-			t.y = y||0;
-			t.xprevious = t.x;
-			t.yprevious = t.y;
-			t.image_angle = 0;
+			t.xprevious = x;
+			t.yprevious = y;
 			t.mask = obj.mask?{}:null;
-			t.xscale = 1;
-			t.yscale = 1;
 			t.collision_objects = [];
-			
 			
 			for(var a in obj.alarms){
 				var al = obj.alarms[a];
@@ -295,10 +288,10 @@ var GMJS = new (function(){'use strict';
 				}
 				t.xprevious = t.x;
 				t.yprevious = t.y;
-			}
+			};
 			t.step_code = function(){
 				if(_destroy) return;
-				updateLocalAsset();	
+				updateLocalAsset();
 				if(!t.sprite.renderable) t.sprite.renderable = true;
 				for(var a in obj.alarms){//Alarm Event
 					t[obj.alarms[a].name]._run_step();
@@ -314,7 +307,7 @@ var GMJS = new (function(){'use strict';
 					return;
 				}
 				obj.obj_end_step(t);//End Step Event
-			}
+			};
 			
 			var texture;
 			for(var tx in TexList){
@@ -326,8 +319,16 @@ var GMJS = new (function(){'use strict';
 			}
 			if(obj.image != null){
 				t.sprite = new AnimSprite(texture);
+				if(texture.length > 1){
+					console.log(t.object_index.name, texture, t.sprite);
+				}
 			} else {
 				t.sprite = new Sprite('');
+			}
+			if(!!t.sprite.play){
+				t.sprite.onLoop = function(){obj.obj_end_animation_step(t);};
+				t.sprite.animationSpeed = 0.5;
+				t.sprite.play();
 			}
 			t.sprite.anchor.x = 0.5;
 			t.sprite.anchor.y = 0.5;
@@ -339,12 +340,22 @@ var GMJS = new (function(){'use strict';
 			Object.defineProperty(t.graphics, 'depth', {get:function(){return t.graphics.zIndex;}, set:function(x){_DepthChanged = (t.graphics.zIndex != x);t.graphics.zIndex = x;}});
 			app.stage.addChild(t.graphics);
 			
+			Object.defineProperty(t, 'image_alpha', {get:function(){return image_alpha;}, set:function(x){image_alpha = Math.max(Math.min(x, 1), 0);t.sprite.alpha = image_alpha;}});
+			Object.defineProperty(t, 'image_angle', {get:function(){return image_angle;}, set:function(x){image_angle = x;t.sprite.rotation = (image_angle)*Math.PI/180;}});
+			Object.defineProperty(t, 'xscale', {get:function(){return xscale;}, set:function(x){xscale = x;t.sprite.scale.y = x;}});
+			Object.defineProperty(t, 'yscale', {get:function(){return yscale;}, set:function(x){yscale= x;t.sprite.scale.x = x;}});
+			Object.defineProperty(t, 'x', {get:function(){return x;}, set:function(v){x = v;t.sprite.x = v;}});
+			Object.defineProperty(t, 'y', {get:function(){return y;}, set:function(v){y = v;t.sprite.y = v;}});
+			Object.defineProperty(t, 'image_single', {get:function(){return image_single;}, set:(!!t.sprite.play)?function(x){image_single = x;if(x == -1) t.sprite.play(); else t.sprite.gotoAndStop(x);}:function(){}});
+			Object.defineProperty(t, 'image_index', {get:function(){return (!!t.sprite.play)?t.sprite.currentFrame:0;}, set:function(){}});
+			Object.defineProperty(t, 'image_number', {get:function(){return (!!t.sprite.play)?t.sprite.totalFrames:1;}, set:function(){}});
 			
-			updateLocalAsset();//Set info
+			t.x = x;t.y = y; //Set new x,y coordinate
+			
+			updateLocalAsset(); //Set info
 			
 			_DepthChanged = true;
-			obj.obj_create(t)//Creation Event
-			updateLocalAsset();//Complete information based no creation event
+			obj.obj_create(t) //Creation Event
 		},
 		object = function(args){
 			var t = this;
@@ -367,7 +378,7 @@ var GMJS = new (function(){'use strict';
 				o = get_object(o);
 				tt._run_step = function(){
 					_with(o, function(ii){
-						if(checkCollision(scope.mask, ii.mask)) code(scope, ii);
+						if(checkCollision(scope.mask, ii.mask)) return code(scope, ii) != false;
 					});
 				}
 			}
@@ -380,6 +391,7 @@ var GMJS = new (function(){'use strict';
 			t.obj_create = ('creation' in args)?args.creation:((t.parent)?t.parent.obj_create:function(){});
 			t.obj_step = ('step' in args)?args.step:((t.parent)?t.parent.obj_step:function(){});
 			t.obj_end_step = ('end_step' in args)?args.end_step:((t.parent)?t.parent.obj_end_step:function(){});
+			t.obj_end_animation_step = ('end_animation_step' in args)?args.end_animation_step:((t.parent)?t.parent.obj_end_animation_step:function(){});
 			t.obj_destroyed = ('destroyed' in args)?args.destroyed:((t.parent)?t.parent.obj_destroyed:function(){})
 			t.alarms = ('alarms' in args)?args.alarms:((t.parent)?t.parent.alarms:[]);
 			t.collision = ('collision' in args)?args.collision:((t.parent)?t.parent.collision:[]);

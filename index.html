@@ -18,8 +18,10 @@ window.onload = function(){'use strict';
 	
 	
 	//Setup Sprites
-	var Sprites = [{name:'spr_treasure', path:'images/treasurebox.png'},
-	{path:'images/sprites.png', strip:[{name:'spr_enemy', tile:{x:0,y:0,w:64,h:64}}, {name:'spr_character', tile:{x:0,y:64,w:64,h:64}}]},
+var Sprites = [{path:'images/sprites.png', strip:[{name:'spr_character', animated:{count:12,columns:6,w:64,h:64}},
+	{name:'spr_enemy', tile:{x:0,y:0,w:64,h:64}}]},
+	{name:'spr_treasure', path:'images/treasurebox.png'},
+	//{path:'images/sprites.png', strip:[{name:'spr_enemy', tile:{x:0,y:0,w:64,h:64}}, {name:'spr_character', tile:{x:0,y:64,w:64,h:64}}]},
 	{name:'spr_wall', path:'images/wall.png'},
 	{name:'spr_shield', path:'images/shield.png'},
 	{name:'spr_health', path:'images/health.png'},
@@ -61,7 +63,7 @@ window.onload = function(){'use strict';
 						t.draw_kills.depth = -2;
 					t.create_item.time = 60 + Math.random()*100;
 					t.create_player.time = 50;//create player first
-					t.create_enemy.time = 100;
+					//t.create_enemy.time = 100;
 					t.kills = 0;
 					t.player = null;
 				},
@@ -228,6 +230,8 @@ window.onload = function(){'use strict';
 			image:'spr_character',
 			parent:GatherObjects,
 			creation:function(t){
+				console.log(t);
+				t.image_single = 5;
 				t.points = 0;
 				t.health = 100;
 				t.shield = 50; //steps for invincibility after hit
@@ -270,10 +274,10 @@ window.onload = function(){'use strict';
 			},
 			collision:[
 				{object:CollisionObjects, code:function(t, other){
-					if(t.left && other.x < t.x && Math.abs(t.y - other.y) < other.sprite.height-8) t.x = t.xprevious;
-					if(t.right && other.x > t.x && Math.abs(t.y - other.y) < other.sprite.height-8) t.x = t.xprevious;
-					if(t.up && other.y < t.y && Math.abs(t.x - other.x) < other.sprite.width-8) t.y = t.yprevious;
-					if(t.down && other.y > t.y && Math.abs(t.x - other.x) < other.sprite.width-8) t.y = t.yprevious;
+					if(t.left && other.x < t.x && Math.abs(t.y - other.y) < other.sprite.height - 8) t.x = t.xprevious;
+					if(t.right && other.x > t.x && Math.abs(t.y - other.y) < other.sprite.height - 8) t.x = t.xprevious;
+					if(t.up && other.y < t.y && Math.abs(t.x - other.x) < other.sprite.width - 8) t.y = t.yprevious;
+					if(t.down && other.y > t.y && Math.abs(t.x - other.x) < other.sprite.width - 8) t.y = t.yprevious;
 				}}, {object:ItemObjects, code:function(t, other){
 					if(other.image_alpha < 1) return;
 					switch(other.object_index){
