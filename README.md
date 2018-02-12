@@ -7,9 +7,9 @@ Note: In using this wrapper, you fully acknowledge that there are known performa
 </p>
 <p>
 Requirements:<br>
-PIXI.js\*<br>
-Nimble.js (HID input library)\*<br>
-\*Included in repository
+PIXI.js*<br>
+Nimble.js (HID input library)*<br>
+*Included in repository
 </p>
 <br>
 <p>I did not make any of the included files; however they are just requirements for the GMJS wrapper.</p>
