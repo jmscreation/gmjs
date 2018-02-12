@@ -1,11 +1,12 @@
 /* ------------------------------------------ //
 					GM-JS
-			Version: 0.2.5
+			Version: 0.2.6
 			Author: jmscreator
 			License: Free to use
 			
 	Current Progress:
 		Cleaning up code
+		Adding Animation
 // ------------------------------------------- */
 
 var GMJS = new (function(){'use strict';
@@ -15,17 +16,13 @@ var GMJS = new (function(){'use strict';
 	if(_error) throw ('GMJS Failed To Load Because '+_error.toString()+' Error'+'s'.repeat((_error>1))+' Occurred');
 	var This = this;
 	var _GameEngineStarted = false;
-	var keyboard = new nimble.Keyboard(),
-		mouse = new nimble.Mouse();
-	keyboard.steps = true;
-	mouse.steps = true;
-	var object_table = [];
 	var Application = PIXI.Application,
 		Container = PIXI.Container,
 		Graphics = PIXI.Graphics,
 		Text = PIXI.Text,
 		TextStyle = PIXI.TextStyle,
 		Sprite = PIXI.Sprite,
+		AnimSprite = PIXI.extras.AnimatedSprite,
 		Rectangle = PIXI.Rectangle,
 		TextureCache = PIXI.utils.TextureCache,
 		Texture = PIXI.Texture,
@@ -46,6 +43,7 @@ var GMJS = new (function(){'use strict';
 		if(_GameEngineStarted) return console.error('GameEngine Is Running!');
 		_GameEngineStarted = true;
 		
+		//Setup game initialization parameters
 		var GameStart = Params['onStart']||function(){},
 		GameEnd = Params['onEnd'] || function(){},
 		Images = Params['images'] || [],
@@ -54,6 +52,7 @@ var GMJS = new (function(){'use strict';
 		View.width = ('width' in View)?View.width:512;
 		View.height = ('height' in View)?View.height:512;
 		
+		//Create game application frame
 		var app = new Application(View);
 		app.stage.updateLayersOrder = function () {
 			app.stage.children.sort(function(a,b) {
@@ -62,10 +61,43 @@ var GMJS = new (function(){'use strict';
 				return b.zIndex - a.zIndex
 			});
 		};
-		Images = Images || [];
 		
+		//Create game on screen
 		document.body.appendChild(app.view);
 		
+		function loadTextures(list){
+			function createFrame(tx, tile){
+				if(!in_array(['x', 'y', 'w', 'h'], tile)) return false;
+				tx.frame = (new Rectangle(tile.x, tile.y, tile.w, tile.h));return true;
+			}
+			for(var img in list){
+				var i = list[img];
+				if(TextureCache[i.path] == undefined) {console.error('Failed loading resource - '+i.name+' - Image file not found');continue;}
+				var tex = new Texture(BaseTexture.fromImage(i.path)); // Generate New Texture
+				if('tile' in i){
+					if(!createFrame(tex, i.tile)) console.error('Failed creating frame for - '+i.name);
+				}
+				/* // Not Finished
+				if('animated' in i){
+					i.texture = [];
+					var j = i.animated;
+					var count = j.count,
+					columns = j.columns,
+					w = j.w,h = j.h,
+					xoff = j.xoff,yoff = j.yoff,
+					xsep = j.xsep,ysep = j.ysep;
+					
+					for(var t = 0; t < count; t++){
+						i.texture.push(new Texture(BaseTexture.fromImage(i.path))); // Animation Textures
+					}
+					
+					
+				}*/
+				i.texture = tex;
+			}
+		}
+		
+		//Import textures
 		var TexList = [];
 		for(var img in Images){
 			var i = Images[img];
@@ -85,25 +117,17 @@ var GMJS = new (function(){'use strict';
 			TexList.push(i);
 		}
 		
-		function loadTextures(list){
-			function createFrame(tx, i){
-				if(!in_array(['x', 'y', 'w', 'h'], i.tile)) return false;
-				tx.frame = (new Rectangle(i.tile.x, i.tile.y, i.tile.w, i.tile.h));return true;
-			}
-			for(var img in list){
-				var i = list[img];
-				if(TextureCache[i.path] == undefined) {console.error('Failed loading resource - '+i.name+' - Image file not found');continue;}
-				var tex = new Texture(BaseTexture.fromImage(i.path)); // Generate New Texture
-				if('tile' in i){
-					if(!createFrame(tex, i)) console.error('Failed creating frame for - '+i.name);
-				}
-				i.texture = tex;
-			}
-		}
+		//Setup important class objects/variables
+		var _DepthChanged = false,
+		room = app.screen,
+		keyboard = new nimble.Keyboard(),
+		mouse = new nimble.Mouse(),
+		object_table = [];
 		
-		var _DepthChanged = false;
-		var room = app.screen;
+		keyboard.steps = true;
+		mouse.steps = true;
 		
+		//Setup in-game class functions
 		var create_text_style = function(style){
 			return new TextStyle(style);
 		},
@@ -296,21 +320,27 @@ var GMJS = new (function(){'use strict';
 			for(var tx in TexList){
 				if(TexList[tx].name == obj.image){
 					texture = TexList[tx].texture;
+					if(!texture.length) texture = [texture];
 					break;
 				}
 			}
-			
-			t.sprite = new Sprite((obj.image == null)?'':texture);
+			if(obj.image != null){
+				t.sprite = new AnimSprite(texture);
+			} else {
+				t.sprite = new Sprite('');
+			}
+			t.sprite.anchor.x = 0.5;
+			t.sprite.anchor.y = 0.5;
 			t.sprite.renderable = false;
+			app.stage.addChild(t.sprite);
+			
 			t.graphics = new Graphics();
 			t.graphics.zIndex = depth;
 			Object.defineProperty(t.graphics, 'depth', {get:function(){return t.graphics.zIndex;}, set:function(x){_DepthChanged = (t.graphics.zIndex != x);t.graphics.zIndex = x;}});
-			t.sprite.anchor.x = 0.5;
-			t.sprite.anchor.y = 0.5;
-			updateLocalAsset();//Set info
-			
 			app.stage.addChild(t.graphics);
-			app.stage.addChild(t.sprite);
+			
+			
+			updateLocalAsset();//Set info
 			
 			_DepthChanged = true;
 			obj.obj_create(t)//Creation Event
