@@ -65,7 +65,6 @@ window.onload = function(){'use strict';
 					t.graphics.drawRect(0, 0, 128, 16);
 					if(t.player){
 						t.draw_kills.text = 'Kills: ' + t.kills.toString() + '  Points: '+t.player.points.toString();
-						
 					}
 				},
 				alarms:[
@@ -216,6 +215,13 @@ window.onload = function(){'use strict';
 				if(t.hit){
 					t.image_alpha = t.flash;
 				}
+				if(t.health <= 0){
+					t.instance_destroy();
+					g.With(Cont, function(tt){
+						tt.create_player.time = 100;
+					});
+					return;
+				}
 				t.depth = g.room.height - t.y;
 				t.graphics.depth = t.depth - 1;
 				draw_bar(t.graphics, t.x, t.y - t.sprite.height/2 - 10, {border:0x007700, fill:(t.health<60)?((t.health<30)?((t.health<15)?0X770000:0XDD0000):0XDDDD00):0X00DD00}, t.health);
@@ -247,8 +253,8 @@ window.onload = function(){'use strict';
 					if(!t.hit){
 						t.hit = true;
 						t.hit_flash.time = 5;
-						t.health-=1 + 4*Math.random();
-						t.shield -= Math.random();
+						t.health-= 1 + 4*Math.random();
+						t.shield = Math.max(t.shield - Math.random()*2, 1);
 					}
 				}}
 			],
