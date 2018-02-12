@@ -12,6 +12,7 @@ Nimble.js (HID input library)*<br>
 *Included in repository
 </p>
 <br>
+<p>Due to the nature of PIXI's resource loader, you must host the files on a mini-webserver in order to play the game.</p>
 <p>I did not make any of the included files; however they are just requirements for the GMJS wrapper.</p>
 <br>
 <br>
