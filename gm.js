@@ -1,6 +1,6 @@
 /* ------------------------------------------ //
 					GM-JS
-			Version: 0.2.9
+			Version: 0.3.0
 			Author: jmscreator
 			License: Free to use
 			
@@ -264,17 +264,22 @@ var GMJS = new (function(){'use strict';
 			var t = this;
 			//Local vars for instance
 			var _destroy = false,
-			_UpdateLocalAsset = false,
 			depth = obj.depth,
 			image_alpha = 1,
 			image_single = 0,
 			image_angle = 0,
 			xscale = 1,yscale = 1;
 			
-			var updateLocalAsset = function(){
-				t.mask = (obj.mask)?{x:obj.mask.x+t.x, y:obj.mask.y+t.y, width:obj.mask.w, height:obj.mask.h}:{x:t.x, y:t.y, width:t.sprite.width, height:t.sprite.height};
-				if(obj.mask && 'radius' in obj.mask)
-					t.mask.width = t.mask.height = (t.mask.radius = obj.mask.radius)*2;
+			var updateMask = function(){
+				var m = t.mask;
+				if(!!obj.mask){
+					t.mask.xoff = obj.mask.x;
+					t.mask.yoff = obj.mask.y;
+					if('radius' in obj.mask)
+						t.mask.width = t.mask.height = (t.mask.radius = obj.mask.radius)*2;
+					else 
+						{t.mask.width = obj.mask.w;t.mask.height = obj.mask.h;}
+				} else {t.mask.width = t.sprite.width;t.mask.height = t.sprite.height;}
 			}
 			
 			Object.defineProperty(t, 'object_index', {value:obj, writeable:false});
@@ -283,7 +288,7 @@ var GMJS = new (function(){'use strict';
 			t.active = true;
 			t.xprevious = x;
 			t.yprevious = y;
-			t.mask = obj.mask?{}:null;
+			t.mask = {xoff:0, yoff:0};
 			t.collision_objects = [];
 			
 			for(var a in obj.alarms){
@@ -318,7 +323,6 @@ var GMJS = new (function(){'use strict';
 					t[obj.alarms[a].name]._run_step();
 				}
 				obj.obj_step(t);//Step Event
-				if(_UpdateLocalAsset) updateLocalAsset();
 			};
 			t.end_step_code = function(){
 				if(_destroy){
@@ -361,17 +365,17 @@ var GMJS = new (function(){'use strict';
 			
 			Object.defineProperty(t, 'image_alpha', {get:function(){return image_alpha;}, set:function(x){image_alpha = Math.max(Math.min(x, 1), 0);t.sprite.alpha = image_alpha;}});
 			Object.defineProperty(t, 'image_angle', {get:function(){return image_angle;}, set:function(x){image_angle = x;t.sprite.rotation = (image_angle)*Math.PI/180;}});
-			Object.defineProperty(t, 'xscale', {get:function(){return xscale;}, set:function(x){xscale = x;t.sprite.scale.y = x;}});
-			Object.defineProperty(t, 'yscale', {get:function(){return yscale;}, set:function(x){yscale= x;t.sprite.scale.x = x;}});
-			Object.defineProperty(t, 'x', {get:function(){return x;}, set:function(v){x = v;t.sprite.x = v; _UpdateLocalAsset = true;}});
-			Object.defineProperty(t, 'y', {get:function(){return y;}, set:function(v){y = v;t.sprite.y = v; _UpdateLocalAsset = true;}});
+			Object.defineProperty(t, 'xscale', {get:function(){return xscale;}, set:function(x){xscale = x;t.sprite.scale.y = x;if(!obj.mask) updateMask();}});
+			Object.defineProperty(t, 'yscale', {get:function(){return yscale;}, set:function(x){yscale= x;t.sprite.scale.x = x;if(!obj.mask) updateMask();}});
+			Object.defineProperty(t, 'x', {get:function(){return x;}, set:function(v){x = v;t.sprite.x = v; t.mask.x = v + t.mask.xoff;}});
+			Object.defineProperty(t, 'y', {get:function(){return y;}, set:function(v){y = v;t.sprite.y = v; t.mask.y = v + t.mask.yoff;}});
 			Object.defineProperty(t, 'image_single', {get:function(){return image_single;}, set:(!!t.sprite.play)?function(x){image_single = x;if(x == -1) t.sprite.play(); else t.sprite.gotoAndStop(x);}:function(){}});
 			Object.defineProperty(t, 'image_index', {get:function(){return (!!t.sprite.play)?t.sprite.currentFrame:0;}, set:function(){}});
 			Object.defineProperty(t, 'image_number', {get:function(){return (!!t.sprite.play)?t.sprite.totalFrames:1;}, set:function(){}});
 			
 			t.x = x;t.y = y; //Set new x,y coordinate
 			
-			updateLocalAsset(); //Set info
+			updateMask();
 			
 			_DepthChanged = true;
 			obj.obj_create(t) //Creation Event
