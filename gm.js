@@ -1,6 +1,6 @@
 /* ------------------------------------------ //
 					GM-JS
-			Version: 0.2.8
+			Version: 0.2.9
 			Author: jmscreator
 			License: Free to use
 			
@@ -264,6 +264,7 @@ var GMJS = new (function(){'use strict';
 			var t = this;
 			//Local vars for instance
 			var _destroy = false,
+			_UpdateLocalAsset = false,
 			depth = obj.depth,
 			image_alpha = 1,
 			image_single = 0,
@@ -317,6 +318,7 @@ var GMJS = new (function(){'use strict';
 					t[obj.alarms[a].name]._run_step();
 				}
 				obj.obj_step(t);//Step Event
+				if(_UpdateLocalAsset) updateLocalAsset();
 			};
 			t.end_step_code = function(){
 				if(_destroy){
@@ -361,8 +363,8 @@ var GMJS = new (function(){'use strict';
 			Object.defineProperty(t, 'image_angle', {get:function(){return image_angle;}, set:function(x){image_angle = x;t.sprite.rotation = (image_angle)*Math.PI/180;}});
 			Object.defineProperty(t, 'xscale', {get:function(){return xscale;}, set:function(x){xscale = x;t.sprite.scale.y = x;}});
 			Object.defineProperty(t, 'yscale', {get:function(){return yscale;}, set:function(x){yscale= x;t.sprite.scale.x = x;}});
-			Object.defineProperty(t, 'x', {get:function(){return x;}, set:function(v){x = v;t.sprite.x = v; updateLocalAsset();}});
-			Object.defineProperty(t, 'y', {get:function(){return y;}, set:function(v){y = v;t.sprite.y = v; updateLocalAsset();}});
+			Object.defineProperty(t, 'x', {get:function(){return x;}, set:function(v){x = v;t.sprite.x = v; _UpdateLocalAsset = true;}});
+			Object.defineProperty(t, 'y', {get:function(){return y;}, set:function(v){y = v;t.sprite.y = v; _UpdateLocalAsset = true;}});
 			Object.defineProperty(t, 'image_single', {get:function(){return image_single;}, set:(!!t.sprite.play)?function(x){image_single = x;if(x == -1) t.sprite.play(); else t.sprite.gotoAndStop(x);}:function(){}});
 			Object.defineProperty(t, 'image_index', {get:function(){return (!!t.sprite.play)?t.sprite.currentFrame:0;}, set:function(){}});
 			Object.defineProperty(t, 'image_number', {get:function(){return (!!t.sprite.play)?t.sprite.totalFrames:1;}, set:function(){}});
