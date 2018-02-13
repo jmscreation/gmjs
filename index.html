@@ -36,7 +36,6 @@ var Sprites = [{path:'images/sprites.png', strip:[{name:'spr_character', animate
 	} else return console.error('GMJS not found');
 	
 	var g = GMJS;
-	var Cont, Enemy, TreasureBox, Character, Wall, Bullet, ItemObjects, CollisionObjects, GatherObjects, ShieldItem, HealthItem;
 	
 	function draw_bar(g, x, y, color, life, full, width){
 		width = width || 32;
@@ -55,7 +54,7 @@ var Sprites = [{path:'images/sprites.png', strip:[{name:'spr_character', animate
 		//Setup Fonts
 		var PlayerFont = g.create_text_style({fontFamily: 'Arial', fontSize: 10, fill:0xFFFFFF});
 		//Setup Objects
-		Cont = new g.object({
+		var Cont = new g.object({
 				name:'controller',
 				creation:function(t){
 					t.draw_kills = g.create_text('', 8, 8, PlayerFont);
@@ -73,6 +72,11 @@ var Sprites = [{path:'images/sprites.png', strip:[{name:'spr_character', animate
 					if(t.player){
 						t.draw_kills.text = 'Kills: ' + t.kills.toString() + '  Points: '+t.player.points.toString();
 					}
+					if(g.mouse_check_pressed() && g.keyboard.shift){
+						var xx = g.mouse.x,
+						yy = g.mouse.y;
+						Wall.instance_create(Math.round(xx/32)*32, Math.round(yy/32)*32);
+					}
 				},
 				alarms:[
 				{name:'create_item', code:function(t){var item = ([TreasureBox, HealthItem, ShieldItem])[Math.round(Math.random()*2)]; item.instance_create(Math.random()*g.room.width,Math.random()*g.room.height);t.create_item.time = 10*t.player.points + 100*(ItemObjects.instance_number() + 1) + Math.random()*100;}},
@@ -83,14 +87,14 @@ var Sprites = [{path:'images/sprites.png', strip:[{name:'spr_character', animate
 					Enemy.instance_create(xx, yy);t.create_enemy.time = Math.max(100 + Math.random()*(1500 - t.kills), 50);}}
 				]
 			});
-		GatherObjects = new g.object({
+		var GatherObjects = new g.object({
 				name:'gather_objects'
 			});
-		CollisionObjects = new g.object({
+		var CollisionObjects = new g.object({
 			name:'collision_objects',
 			parent:GatherObjects
 		});
-		ItemObjects = new g.object({
+		var ItemObjects = new g.object({
 			name:'ItemPar',
 			mask:{x:0, y:0, w:8, h:8},
 			creation:function(t){
@@ -104,7 +108,7 @@ var Sprites = [{path:'images/sprites.png', strip:[{name:'spr_character', animate
 			},
 			collision:[{object:GatherObjects, code:function(t,other){if(t.image_alpha >= 1 || other.object_index == Wall)t.instance_destroy();}}]
 		});
-		Bullet = new g.object({
+		var Bullet = new g.object({
 				name:'Bullet',
 				image:'spr_bullet',
 				mask:{x:0,y:0,w:8,h:8},
@@ -136,22 +140,22 @@ var Sprites = [{path:'images/sprites.png', strip:[{name:'spr_character', animate
 					}}
 				]
 			});
-		TreasureBox = new g.object({
+		var TreasureBox = new g.object({
 				name:'TreasureBox',
 				image:'spr_treasure',
 				parent:ItemObjects
 			});
-		HealthItem = new g.object({
+		var HealthItem = new g.object({
 				name:'Health',
 				image:'spr_health',
 				parent:ItemObjects
 			});
-		ShieldItem = new g.object({
+		var ShieldItem = new g.object({
 				name:'Shield',
 				image:'spr_shield',
 				parent:ItemObjects
 			});
-		Enemy = new g.object({
+		var Enemy = new g.object({
 			image:'spr_enemy',
 			name:'Enemy',
 			parent:GatherObjects,
@@ -214,7 +218,7 @@ var Sprites = [{path:'images/sprites.png', strip:[{name:'spr_character', animate
 				}}
 			]
 		});	
-		Wall = new g.object({
+		var Wall = new g.object({
 			name:'Wall',
 			image:'spr_wall',
 			parent:CollisionObjects,
@@ -222,7 +226,7 @@ var Sprites = [{path:'images/sprites.png', strip:[{name:'spr_character', animate
 				t.depth = g.room.height - t.y;
 			}
 		});
-		Character = new g.object({
+		var Character = new g.object({
 			name:'Character',
 			image:'spr_character',
 			mask:{x:0,y:0,radius:16},
