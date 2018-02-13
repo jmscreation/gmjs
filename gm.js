@@ -1,11 +1,12 @@
 /* ------------------------------------------ //
 					GM-JS
-			Version: 0.2.7
+			Version: 0.2.8
 			Author: jmscreator
 			License: Free to use
 			
 	Current Progress:
 		Cleaning up code
+		Adding advanced collision checking
 // ------------------------------------------- */
 
 var GMJS = new (function(){'use strict';
@@ -86,15 +87,12 @@ var GMJS = new (function(){'use strict';
 					xoff = j.xoff || 0,yoff = j.yoff || 0,
 					xsep = j.xsep || 0,ysep = j.ysep || 0;
 					
-					console.log(xoff, yoff, xsep, ysep);
-					
 					for(var t = 0; t < count; t++){
 						var tx = new Texture(BaseTexture.fromImage(i.path)); // Animation Textures
 						tex.push(tx);
 						var xx = (t % columns),
 						row = Math.floor(t / columns),
 						tile = {x:(xoff+w*xx+xsep*(!!xx)), y:(yoff+h*row+ysep*(!!t)*row), w:w, h:h};
-						console.log(xx, tile);
 						createFrame(tx, tile);
 					}
 				}
@@ -206,24 +204,20 @@ var GMJS = new (function(){'use strict';
 				return (checkCollision({x:mouse.x, y:mouse.y, width:1, height:1}, t.sprite));
 			}
 		},
-		checkCollision = function(r1, r2) {
-			var widths, heights, vx, vy;
+		checkCollision = function(r1, r2){
 			if(r1 === r2) return false;
-			r1.centerX = r1.x; 
-			r1.centerY = r1.y; 
-			r2.centerX = r2.x; 
-			r2.centerY = r2.y; 
+			if('radius' in r2 && !('radius' in r1)) {
+				var _t=r1; r1=r2; r2=_t;
+			}
+			if(!('radius' in r1)) {
+				return (Math.abs(r1.x-r2.x)<(r1.width+r2.width)/2 && Math.abs(r1.y-r2.y)<(r1.height+r2.height)/2);
+			} else if(!('radius' in r2)) {
+				var vx=r1.x-r2.x, vy=r1.y-r2.y, dx=Math.abs(vx), dy=Math.abs(vy), wd=r1.radius+r2.width/2, hd=r1.radius+r2.height/2, ccx,ccy;
+				return (dx<r2.width/2 && dy<hd) || (dy<r2.height/2 && dx<wd) || (ccx=Math.sign(vx)*r2.width/2,ccy=Math.sign(vy)*r2.height/2,(vx-ccx)**2 + (vy-ccy)**2 < r1.radius**2);
+			} else {
+				return (r1.x-r2.x)**2 + (r1.y-r2.y)**2 < (r1.radius+r2.radius)**2;
+			}
 
-			r1.halfWidth = r1.width / 2;
-			r1.halfHeight = r1.height / 2;
-			r2.halfWidth = r2.width / 2;
-			r2.halfHeight = r2.height / 2;
-
-			vx = r1.centerX - r2.centerX;
-			vy = r1.centerY - r2.centerY;
-			widths = r1.halfWidth + r2.halfWidth;
-			heights = r1.halfHeight + r2.halfHeight;
-			return (Math.abs(vx) < widths && Math.abs(vy) < heights);
 		},
 		collision_with = function(t, o){
 			o = get_object(o);
@@ -241,6 +235,31 @@ var GMJS = new (function(){'use strict';
 			});
 			return list.length?list:false;
 		},
+		collision_bounce = function(t, other){
+			if('radius' in t.mask){
+				var vx = t.xprevious-other.x, vy = t.yprevious-other.y,
+					dx=Math.abs(vx), dy=Math.abs(vy),
+					wd=t.mask.radius+other.mask.width/2, hd=t.mask.radius+other.mask.height/2;
+				
+				if(dx<other.mask.width/2)
+					t.y = other.y + Math.sign(vy) * hd;
+				else if(dy<other.mask.height/2)
+					t.x = other.x + Math.sign(vx) * wd;
+				else {
+					vx -= Math.sign(vx)*other.mask.width/2;
+					vy -= Math.sign(vy)*other.mask.height/2;
+					var l = 1 - t.mask.radius/Math.sqrt(vx*vx+vy*vy);
+					t.x -= vx*l;
+					t.y -= vy*l;
+				}
+			} else {
+				var vx = t.xprevious-other.x, vy = t.yprevious-other.y, d1;
+				if((d1=vx>vy) ^ (vx+vy>0))
+					t.y = other.y + (1-d1*2) * (t.mask.height+other.mask.height)/2;
+				else
+					t.x = other.x + (d1*2-1) * (t.mask.width+other.mask.width)/2;
+			}
+		},
 		instance = function(obj, x, y){
 			var t = this;
 			//Local vars for instance
@@ -252,8 +271,9 @@ var GMJS = new (function(){'use strict';
 			xscale = 1,yscale = 1;
 			
 			var updateLocalAsset = function(){
-				t.graphics.clear();
 				t.mask = (obj.mask)?{x:obj.mask.x+t.x, y:obj.mask.y+t.y, width:obj.mask.w, height:obj.mask.h}:{x:t.x, y:t.y, width:t.sprite.width, height:t.sprite.height};
+				if(obj.mask && 'radius' in obj.mask)
+					t.mask.width = t.mask.height = (t.mask.radius = obj.mask.radius)*2;
 			}
 			
 			Object.defineProperty(t, 'object_index', {value:obj, writeable:false});
@@ -286,12 +306,12 @@ var GMJS = new (function(){'use strict';
 				for(var c in t.collision_objects){
 					t.collision_objects[c]._run_step();//Collision Checking
 				}
-				t.xprevious = t.x;
-				t.yprevious = t.y;
 			};
 			t.step_code = function(){
 				if(_destroy) return;
-				updateLocalAsset();
+				t.graphics.clear();
+				t.xprevious = t.x;
+				t.yprevious = t.y;
 				if(!t.sprite.renderable) t.sprite.renderable = true;
 				for(var a in obj.alarms){//Alarm Event
 					t[obj.alarms[a].name]._run_step();
@@ -319,9 +339,6 @@ var GMJS = new (function(){'use strict';
 			}
 			if(obj.image != null){
 				t.sprite = new AnimSprite(texture);
-				if(texture.length > 1){
-					console.log(t.object_index.name, texture, t.sprite);
-				}
 			} else {
 				t.sprite = new Sprite('');
 			}
@@ -344,8 +361,8 @@ var GMJS = new (function(){'use strict';
 			Object.defineProperty(t, 'image_angle', {get:function(){return image_angle;}, set:function(x){image_angle = x;t.sprite.rotation = (image_angle)*Math.PI/180;}});
 			Object.defineProperty(t, 'xscale', {get:function(){return xscale;}, set:function(x){xscale = x;t.sprite.scale.y = x;}});
 			Object.defineProperty(t, 'yscale', {get:function(){return yscale;}, set:function(x){yscale= x;t.sprite.scale.x = x;}});
-			Object.defineProperty(t, 'x', {get:function(){return x;}, set:function(v){x = v;t.sprite.x = v;}});
-			Object.defineProperty(t, 'y', {get:function(){return y;}, set:function(v){y = v;t.sprite.y = v;}});
+			Object.defineProperty(t, 'x', {get:function(){return x;}, set:function(v){x = v;t.sprite.x = v; updateLocalAsset();}});
+			Object.defineProperty(t, 'y', {get:function(){return y;}, set:function(v){y = v;t.sprite.y = v; updateLocalAsset();}});
 			Object.defineProperty(t, 'image_single', {get:function(){return image_single;}, set:(!!t.sprite.play)?function(x){image_single = x;if(x == -1) t.sprite.play(); else t.sprite.gotoAndStop(x);}:function(){}});
 			Object.defineProperty(t, 'image_index', {get:function(){return (!!t.sprite.play)?t.sprite.currentFrame:0;}, set:function(){}});
 			Object.defineProperty(t, 'image_number', {get:function(){return (!!t.sprite.play)?t.sprite.totalFrames:1;}, set:function(){}});
@@ -378,7 +395,7 @@ var GMJS = new (function(){'use strict';
 				o = get_object(o);
 				tt._run_step = function(){
 					_with(o, function(ii){
-						if(checkCollision(scope.mask, ii.mask)) return code(scope, ii) != false;
+						if(checkCollision(scope.mask, ii.mask)) return code(scope, ii) !== false;
 					});
 				}
 			}
@@ -452,6 +469,7 @@ var GMJS = new (function(){'use strict';
 			This.room = room;
 			This.collision_with = collision_with;
 			This.collision_point = collision_point;
+			This.collision_bounce = collision_bounce;
 			This.With = _with;
 			This.get_object = get_object;
 			This.get_instance = get_instance;

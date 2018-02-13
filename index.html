@@ -19,7 +19,7 @@ window.onload = function(){'use strict';
 	
 	//Setup Sprites
 var Sprites = [{path:'images/sprites.png', strip:[{name:'spr_character', animated:{count:12,columns:6,w:64,h:64}},
-	{name:'spr_enemy', tile:{x:0,y:0,w:64,h:64}}]},
+	{name:'spr_enemy', animated:{count:12,columns:6,w:64,h:64}}]},
 	{name:'spr_treasure', path:'images/treasurebox.png'},
 	//{path:'images/sprites.png', strip:[{name:'spr_enemy', tile:{x:0,y:0,w:64,h:64}}, {name:'spr_character', tile:{x:0,y:64,w:64,h:64}}]},
 	{name:'spr_wall', path:'images/wall.png'},
@@ -169,6 +169,8 @@ var Sprites = [{path:'images/sprites.png', strip:[{name:'spr_character', animate
 				t.reset_motion.time = 10;
 				t.image_alpha = 0;
 				t.spd = 2;
+				t.image_single = Math.round(Math.random()*5);
+				t.power = t.image_single + 1;
 			},
 			destroyed:function(t){
 				Cont.instances[0].kills++;
@@ -197,15 +199,10 @@ var Sprites = [{path:'images/sprites.png', strip:[{name:'spr_character', animate
 				}}
 			],
 			collision:[
-				{object:CollisionObjects, code:function(t, other){
-					if(t.left && other.x < t.x && Math.abs(t.y - other.y) < other.sprite.height-8) t.x = t.xprevious;
-					if(t.right && other.x > t.x && Math.abs(t.y - other.y) < other.sprite.height-8) t.x = t.xprevious;
-					if(t.up && other.y < t.y && Math.abs(t.x - other.x) < other.sprite.width-8) t.y = t.yprevious;
-					if(t.down && other.y > t.y && Math.abs(t.x - other.x) < other.sprite.width-8) t.y = t.yprevious;
-					t.reset_motion.time = 0;
-				}}, {object:Bullet, code:function(t, other){
+				{object:CollisionObjects, code:g.collision_bounce},
+				{object:Bullet, code:function(t, other){
 					other.instance_destroy();
-					t.health-= 10 + Math.random(20);
+					t.health-= (10 + Math.random(20))/t.power;
 					if(t.health < 0) {t.health = 0;t.instance_destroy();}
 				}}, {object:ItemObjects, code:function(t, other){
 					if(other.image_alpha < 1) return;
@@ -228,6 +225,7 @@ var Sprites = [{path:'images/sprites.png', strip:[{name:'spr_character', animate
 		Character = new g.object({
 			name:'Character',
 			image:'spr_character',
+			mask:{x:0,y:0,radius:16},
 			parent:GatherObjects,
 			creation:function(t){
 				console.log(t);
@@ -256,8 +254,6 @@ var Sprites = [{path:'images/sprites.png', strip:[{name:'spr_character', animate
 				}
 				t.depth = g.room.height - t.y;
 				t.graphics.depth = t.depth - 1;
-				draw_bar(t.graphics, t.x, t.y - t.sprite.height/2 - 10, {border:0x007700, fill:(t.health<60)?((t.health<30)?((t.health<15)?0X770000:0XDD0000):0XDDDD00):0X00DD00}, t.health);
-				draw_bar(t.graphics, t.x, t.y - t.sprite.height/2 - 20, {border:0x005959, fill:0X0000F1}, t.shield, 50);
 				t.up = g.keyboard.up;
 				t.down = (g.keyboard.down && !t.up);
 				t.left = g.keyboard.left;
@@ -272,13 +268,13 @@ var Sprites = [{path:'images/sprites.png', strip:[{name:'spr_character', animate
 					ii.dir = [].concat(t.last_dir);
 				}
 			},
+			end_step:function(t){
+				draw_bar(t.graphics, t.x, t.y - t.sprite.height/2 - 10, {border:0x007700, fill:(t.health<60)?((t.health<30)?((t.health<15)?0X770000:0XDD0000):0XDDDD00):0X00DD00}, t.health);
+				draw_bar(t.graphics, t.x, t.y - t.sprite.height/2 - 20, {border:0x005959, fill:0X0000F1}, t.shield, 50);
+			},
 			collision:[
-				{object:CollisionObjects, code:function(t, other){
-					if(t.left && other.x < t.x && Math.abs(t.y - other.y) < other.sprite.height - 8) t.x = t.xprevious;
-					if(t.right && other.x > t.x && Math.abs(t.y - other.y) < other.sprite.height - 8) t.x = t.xprevious;
-					if(t.up && other.y < t.y && Math.abs(t.x - other.x) < other.sprite.width - 8) t.y = t.yprevious;
-					if(t.down && other.y > t.y && Math.abs(t.x - other.x) < other.sprite.width - 8) t.y = t.yprevious;
-				}}, {object:ItemObjects, code:function(t, other){
+				{object:CollisionObjects, code:g.collision_bounce},
+				{object:ItemObjects, code:function(t, other){
 					if(other.image_alpha < 1) return;
 					switch(other.object_index){
 						case TreasureBox: t.points ++;break;
@@ -290,8 +286,8 @@ var Sprites = [{path:'images/sprites.png', strip:[{name:'spr_character', animate
 					if(!t.hit){
 						t.hit = true;
 						t.hit_flash.time = 5;
-						t.health-= 1 + 4*Math.random();
-						t.shield = Math.max(t.shield - Math.random()*2, 1);
+						t.health-= (1 + 4*Math.random())*other.power;
+						t.shield = Math.max(t.shield - Math.random()*2*other.power, 1);
 					}
 				}}
 			],
