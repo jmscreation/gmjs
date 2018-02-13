@@ -1,12 +1,12 @@
 /* ------------------------------------------ //
 					GM-JS
-			Version: 0.3.0
+			Version: 0.3.1
 			Author: jmscreator
 			License: Free to use
 			
 	Current Progress:
 		Cleaning up code
-		Adding advanced collision checking
+		Fixing a collision mask issue
 // ------------------------------------------- */
 
 var GMJS = new (function(){'use strict';
@@ -273,13 +273,13 @@ var GMJS = new (function(){'use strict';
 			var updateMask = function(){
 				var m = t.mask;
 				if(!!obj.mask){
-					t.mask.xoff = obj.mask.x;
-					t.mask.yoff = obj.mask.y;
+					m.xoff = obj.mask.x;
+					m.yoff = obj.mask.y;
 					if('radius' in obj.mask)
-						t.mask.width = t.mask.height = (t.mask.radius = obj.mask.radius)*2;
+						m.width = m.height = (m.radius = obj.mask.radius)*2;
 					else 
-						{t.mask.width = obj.mask.w;t.mask.height = obj.mask.h;}
-				} else {t.mask.width = t.sprite.width;t.mask.height = t.sprite.height;}
+						{m.width = obj.mask.w;m.height = obj.mask.h;}
+				} else {m.width = t.sprite.width;m.height = t.sprite.height;}
 			}
 			
 			Object.defineProperty(t, 'object_index', {value:obj, writeable:false});
@@ -373,9 +373,8 @@ var GMJS = new (function(){'use strict';
 			Object.defineProperty(t, 'image_index', {get:function(){return (!!t.sprite.play)?t.sprite.currentFrame:0;}, set:function(){}});
 			Object.defineProperty(t, 'image_number', {get:function(){return (!!t.sprite.play)?t.sprite.totalFrames:1;}, set:function(){}});
 			
-			t.x = x;t.y = y; //Set new x,y coordinate
-			
 			updateMask();
+			t.x = x;t.y = y; //Set new x,y coordinate
 			
 			_DepthChanged = true;
 			obj.obj_create(t) //Creation Event
