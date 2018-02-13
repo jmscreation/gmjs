@@ -5,8 +5,6 @@
 			License: Free to use (See GPL License)
 			
 	Current Progress:
-		Cleaning up code
-		Fixing a collision mask issue
 // ------------------------------------------- */
 
 var GMJS = new (function(){'use strict';
