@@ -1,8 +1,8 @@
 /* ------------------------------------------ //
 					GM-JS
-			Version: 0.3.1
+			Version: 0.3.2
 			Author: jmscreator
-			License: Free to use
+			License: Free to use (See GPL License)
 			
 	Current Progress:
 		Cleaning up code
@@ -139,7 +139,7 @@ var GMJS = new (function(){'use strict';
 			style = style || {};
 			var _text = new Text(str, style);
 			_text.zIndex = 0;
-			Object.defineProperty(_text, 'depth', {set:function(x){_DepthChanged = (_text.zIndex != x);_text.zIndex = x;}, get:function(){return _text.zIndex;}});
+			Object.defineProperty(_text, 'depth', {set:function(x){_DepthChanged = _DepthChanged || (_text.zIndex != x);_text.zIndex = x;}, get:function(){return _text.zIndex;}});
 			_text.align = function(a, b){b=b||1;switch(a){case 'center':_text.anchor.x = 0.5;_text.anchor.y = 0.5;return;case 'left':_text.anchor.x = 1-b/100;return;case 'right':_text.anchor.x = b/100;return;case 'top':_text.anchor.y = 1-b/100;case 'bottom':_text.anchor.y = b/100;}};
 			_text.x = x || 0;
 			_text.y = y || 0;
@@ -283,9 +283,10 @@ var GMJS = new (function(){'use strict';
 			}
 			
 			Object.defineProperty(t, 'object_index', {value:obj, writeable:false});
-			Object.defineProperty(t, 'depth', {get:function(){return depth;}, set:function(x){_DepthChanged = (depth != x);depth = x;t.sprite.zIndex = depth;}});
+			Object.defineProperty(t, 'depth', {get:function(){return depth;}, set:function(x){_DepthChanged = _DepthChanged || (depth != x);depth = x;t.sprite.zIndex = depth;}});
 			
 			t.active = true;
+			t.destroyed = false;
 			t.xprevious = x;
 			t.yprevious = y;
 			t.mask = {xoff:0, yoff:0};
@@ -304,12 +305,14 @@ var GMJS = new (function(){'use strict';
 			}
 			
 			t.instance_destroy = function(){
+				t.destroyed = true;
 				obj.obj_destroyed(t);//Destroy Event
 				t.sprite.rendered = false;
 				_destroy = true;
 			};
 			t.collision_code = function(){
 				for(var c in t.collision_objects){
+					if(_destroy) return;
 					t.collision_objects[c]._run_step();//Collision Checking
 				}
 			};
@@ -360,7 +363,7 @@ var GMJS = new (function(){'use strict';
 			
 			t.graphics = new Graphics();
 			t.graphics.zIndex = depth;
-			Object.defineProperty(t.graphics, 'depth', {get:function(){return t.graphics.zIndex;}, set:function(x){_DepthChanged = (t.graphics.zIndex != x);t.graphics.zIndex = x;}});
+			Object.defineProperty(t.graphics, 'depth', {get:function(){return t.graphics.zIndex;}, set:function(x){_DepthChanged = _DepthChanged || (t.graphics.zIndex != x);t.graphics.zIndex = x;}});
 			app.stage.addChild(t.graphics);
 			
 			Object.defineProperty(t, 'image_alpha', {get:function(){return image_alpha;}, set:function(x){image_alpha = Math.max(Math.min(x, 1), 0);t.sprite.alpha = image_alpha;}});
@@ -390,8 +393,8 @@ var GMJS = new (function(){'use strict';
 				Object.defineProperty(t, 'time', {set:function(x){time = Math.floor(x);}, get:function(){return time;}});
 				t.code = code;
 				t._run_step = function(){
-					if(time == -1) return;
-					if(time == 0) t.code(scope);
+					if(time == 0) return;
+					if(time == 1) t.code(scope);
 					t.time--;
 				}
 			}
@@ -400,6 +403,7 @@ var GMJS = new (function(){'use strict';
 				o = get_object(o);
 				tt._run_step = function(){
 					_with(o, function(ii){
+						if(ii.destroyed) return;
 						if(checkCollision(scope.mask, ii.mask)) return code(scope, ii) !== false;
 					});
 				}
