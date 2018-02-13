@@ -11,7 +11,7 @@
 		<script type="text/javascript">
 /*
 	This is a game created for testing GM-JS
-	Version 1.3.4
+	Version 1.3.5
 */
 oncontextmenu = function(){return false;};
 window.onload = function(){'use strict';
@@ -51,6 +51,8 @@ var Sprites = [{path:'images/sprites.png', strip:[{name:'spr_character', animate
 	}
 	
 	function GameInit(){
+		//Setup Global Variables
+		var difficulty = 0;
 		//Setup Fonts
 		var PlayerFont = g.create_text_style({fontFamily: 'Arial', fontSize: 10, fill:0xFFFFFF});
 		//Setup Objects
@@ -72,17 +74,7 @@ var Sprites = [{path:'images/sprites.png', strip:[{name:'spr_character', animate
 				step:function(t){
 					t.graphics.beginFill(0X444444);
 					t.graphics.drawRect(0, 0, 128, 16);
-					if(t.debug) g.With(Enemy, function(ii){
-						t.graphics.beginFill((g.collision_point(ii.x - 32, ii.y, CollisionObjects))?0xFF0000:0xFFFFFF);
-						t.graphics.drawCircle(ii.x - 32, ii.y, 8);
-						t.graphics.beginFill((g.collision_point(ii.x + 32, ii.y, CollisionObjects))?0xFF0000:0xFFFFFF);
-						t.graphics.drawCircle(ii.x + 32, ii.y, 8);
-						t.graphics.beginFill((g.collision_point(ii.x, ii.y - 32, CollisionObjects))?0xFF0000:0xFFFFFF);
-						t.graphics.drawCircle(ii.x, ii.y - 32, 8);
-						t.graphics.beginFill((g.collision_point(ii.x, ii.y + 32, CollisionObjects))?0xFF0000:0xFFFFFF);
-						t.graphics.drawCircle(ii.x, ii.y + 32, 8);
-					});
-					
+								
 					if(t.player){
 						t.draw_kills.text = 'Kills: ' + t.kills.toString() + '  Points: '+t.player.points.toString();
 					}
@@ -112,6 +104,25 @@ var Sprites = [{path:'images/sprites.png', strip:[{name:'spr_character', animate
 						}
 					}
 				},
+				end_step:function(t){
+				var a = 0.6;
+					if(t.debug){
+						g.With(Enemy, function(ii){
+							t.graphics.beginFill((g.collision_point(ii.x - 32, ii.y, CollisionObjects))?0xFF0000:0xFFFFFF, a);
+							t.graphics.drawCircle(ii.x - 32, ii.y, 8);
+							t.graphics.beginFill((g.collision_point(ii.x + 32, ii.y, CollisionObjects))?0xFF0000:0xFFFFFF, a);
+							t.graphics.drawCircle(ii.x + 32, ii.y, 8);
+							t.graphics.beginFill((g.collision_point(ii.x, ii.y - 32, CollisionObjects))?0xFF0000:0xFFFFFF, a);
+							t.graphics.drawCircle(ii.x, ii.y - 32, 8);
+							t.graphics.beginFill((g.collision_point(ii.x, ii.y + 32, CollisionObjects))?0xFF0000:0xFFFFFF, a);
+							t.graphics.drawCircle(ii.x, ii.y + 32, 8);
+						});
+						t.graphics.beginFill(0X444444, a);
+						if(t.player){
+							t.graphics.drawCircle(t.player.x, t.player.y, t.player.mask.radius);
+						}
+					}
+				},
 				alarms:[
 				{name:'create_item', code:function(t){var item = ([TreasureBox, HealthItem, ShieldItem])[Math.round(Math.random()*2)]; item.instance_create(Math.random()*g.room.width,Math.random()*g.room.height);t.create_item.time = 10*t.player.points + 100*(ItemObjects.instance_number() + 1) + Math.random()*100;}},
 				{name:'create_player', code:function(t){t.player = Character.instance_create(g.room.width/2, g.room.height/2);}},
@@ -119,7 +130,7 @@ var Sprites = [{path:'images/sprites.png', strip:[{name:'spr_character', animate
 					t.create_enemy.time = Math.max(100 + Math.random()*(1500 - t.kills), 50);
 					do {var xx = 64 + Math.random()*(g.room.width - 128), yy = 64 + Math.random()*(g.room.height - 128);
 					if(tm++>100)return;} while (g.collision_point(xx, yy, CollisionObjects));
-					Enemy.instance_create(xx, yy);}}
+					Enemy.instance_create(xx, yy);difficulty = Math.min(5, difficulty + Math.random()/(15 - player.points));}}
 				]
 			});
 		var GatherObjects = new g.object({
@@ -208,7 +219,7 @@ var Sprites = [{path:'images/sprites.png', strip:[{name:'spr_character', animate
 				t.reset_motion.time = 10;
 				t.image_alpha = 0;
 				t.spd = 2;
-				t.image_single = Math.round(Math.random()*5);
+				t.image_single = Math.round(Math.random()*difficulty);
 				t.power = t.image_single + 1;
 			},
 			destroyed:function(t){
@@ -275,6 +286,7 @@ var Sprites = [{path:'images/sprites.png', strip:[{name:'spr_character', animate
 				t.shield = 50; //steps for invincibility after hit
 				t.reset_hit_rate = function(){t.image_alpha = t.hit;t.hit = false;t.flash = 0;t.hit_rate = Math.round(t.shield);}
 				t.reset_hit_rate();
+				t.canshoot = true;
 				t.spd = 3;
 				t.xscale = 0.5;
 				t.yscale = 0.5;
@@ -303,7 +315,8 @@ var Sprites = [{path:'images/sprites.png', strip:[{name:'spr_character', animate
 				if(t.down){t.y += t.spd;}
 				if(t.left){t.x -= t.spd;}
 				if(t.right){t.x += t.spd;}
-				if(g.keyboard_check_pressed('control')){
+				if(g.keyboard.control && t.canshoot){
+					t.canshoot = false;t.reset_shoot.time = Math.max(20 - t.points, 4);
 					var ii=Bullet.instance_create(t.x + (t.last_dir[0]*-16) + (t.last_dir[1]*16), t.y + (t.last_dir[2]*-16) + (t.last_dir[3]*16));
 					ii.dir = [].concat(t.last_dir);
 				}
@@ -337,6 +350,8 @@ var Sprites = [{path:'images/sprites.png', strip:[{name:'spr_character', animate
 					if(!t.hit_rate) return t.reset_hit_rate();
 					t.flash = !t.flash;
 					t.hit_flash.time = Math.max((t.hit_rate--)/10, 2);
+				}},{name:'reset_shoot', code:function(t){
+					t.canshoot = true;
 				}}
 			]
 		});
