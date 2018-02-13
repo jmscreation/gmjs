@@ -1,6 +1,6 @@
 /* ------------------------------------------ //
 					GM-JS
-			Version: 0.3.2
+			Version: 0.3.3
 			Author: jmscreator
 			License: Free to use (See GPL License)
 			
@@ -52,6 +52,10 @@ var GMJS = new (function(){'use strict';
 		
 		//Create game application frame
 		var app = new Application(View);
+		//console.log(app);
+		// create algorithm
+		// app.stage.x; app.stage.y; //view position in room
+		// app.renderer.resize(width, height); //view port
 		app.stage.updateLayersOrder = function () {
 			app.stage.children.sort(function(a,b) {
 				a.zIndex = a.zIndex || 0;
