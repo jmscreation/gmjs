@@ -412,7 +412,7 @@ var GMJS = new (function(){'use strict';
 			updateMask();
 			t.x = x;t.y = y; //Set new x,y coordinate
 			
-			//_DepthChanged = true;
+			_DepthChanged = true;
 			obj.obj_create(t) //Creation Event
 		},
 		object = function(args){
