@@ -135,7 +135,7 @@ window.onload = function(){'use strict';
 					}
 				},
 				alarms:[
-				{name:'create_item', code:function(t){var item = ([TreasureBox, HealthItem, ShieldItem])[Math.round(Math.random()*2)]; item.instance_create(Math.random()*g.room.width,Math.random()*g.room.height);t.create_item.time = 10*(g.instance_exists(t.player))?t.player.points:0 + 100*(ItemObjects.instance_number() + 1) + Math.random()*100;}},
+				{name:'create_item', code:function(t){var item = ([TreasureBox, HealthItem, ShieldItem])[Math.round(Math.random()*2)]; item.instance_create(Math.random()*g.room.width,Math.random()*g.room.height);t.create_item.time = 10*((g.instance_exists(t.player))?t.player.points:0) + 100*(ItemObjects.instance_number() + 1) + Math.random()*100;}},
 				{name:'create_player', code:function(t){t.player = Character.instance_create(g.room.width/2, g.room.height/2);}},
 				{name:'create_enemy', code:function(t){var tm = 0;
 					t.create_enemy.time = Math.max(100 + Math.random()*(1500 - t.kills), 50);
