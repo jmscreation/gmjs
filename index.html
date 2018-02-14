@@ -11,7 +11,7 @@
 		<script type="text/javascript">
 /*
 	This is a game created for testing GM-JS
-	Version 1.3.7
+	Version 1.3.8
 */
 oncontextmenu = function(){return false;};
 window.onload = function(){'use strict';
@@ -34,12 +34,13 @@ var Sprites = [{path:'images/sprites.png', strip:[{name:'spr_character', animate
 		GMJS.StartGameEngine({
 			onStart:GameInit,
 			images:Sprites,
-			view:{width:480, height:608}
+			room:{width:480, height:608},
+			view:{width:400, height:450}
 		});
 	} else return console.error('GMJS not found');
 	
 	var g = GMJS;
-	
+	console.log(g);
 	function draw_bar(g, x, y, color, life, full, width){
 		width = width || 32;
 		full = full || 100;
@@ -75,9 +76,6 @@ var Sprites = [{path:'images/sprites.png', strip:[{name:'spr_character', animate
 					t.starttimers(true);
 				},
 				step:function(t){
-					t.graphics.beginFill(0X444444);
-					t.graphics.drawRect(0, 0, 128, 16);
-								
 					if(t.player){
 						t.draw_kills.text = 'Kills: ' + t.kills.toString() + '  Points: '+t.player.points.toString();
 					}
@@ -124,6 +122,14 @@ var Sprites = [{path:'images/sprites.png', strip:[{name:'spr_character', animate
 						if(t.player){
 							t.graphics.drawCircle(t.player.x, t.player.y, t.player.mask.radius);
 						}
+					}
+					if(t.player){
+						g.view.x = Math.max(0, Math.min(g.room.width - g.view.width, t.player.x - g.view.width / 2));
+						g.view.y = Math.max(0, Math.min(g.room.height - g.view.height, t.player.y - g.view.height / 2));
+						t.draw_kills.x = g.view.x + 8;
+						t.draw_kills.y = g.view.y + 8;
+						t.graphics.beginFill(0X444444);
+						t.graphics.drawRect(g.view.x, g.view.y, 128, 16);
 					}
 				},
 				alarms:[

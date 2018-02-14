@@ -1,6 +1,6 @@
 /* ------------------------------------------ //
 					GM-JS
-			Version: 0.3.3
+			Version: 0.3.4
 			Author: jmscreator
 			License: Free to use (See GPL License)
 			
@@ -44,18 +44,36 @@ var GMJS = new (function(){'use strict';
 		//Setup game initialization parameters
 		var GameStart = Params['onStart']||function(){},
 		GameEnd = Params['onEnd'] || function(){},
-		Images = Params['images'] || [],
-		View = Params['view'] || {};
+		Images = Params['images'] || [];
 		
-		View.width = ('width' in View)?View.width:512;
-		View.height = ('height' in View)?View.height:512;
+		Params['room'] = Params['room'] || {},
+		Params['view'] = Params['view'] || {}
+		Params['screen'] = Params['screen'] || {};
+		
+		var View = {},
+		Screen = {};
+		
+		This.room = {},
+		This.screen = {},
+		This.view = {};
+		//Game width\height in game room
+		Object.defineProperty(This.room, 'width', {value:('width' in Params.room)?Params.room.width:600, writeable:false});
+		Object.defineProperty(This.room, 'height', {value:('height' in Params.room)?Params.room.height:400, writeable:false});
+		
+		//View width\height in game room
+		Object.defineProperty(This.view, 'width', {get:function(){return View.width;}, set:function(v){View.width = v;app.stage.scale.x = app.renderer.width/v;}});
+		Object.defineProperty(This.view, 'height', {get:function(){return View.height;}, set:function(v){View.height = v;app.stage.scale.y = app.renderer.height/v;}});
+		
+		//View x\y in game room
+		Object.defineProperty(This.view, 'x', {get:function(){return View.x;}, set:function(v){View.x = v;app.stage.x = -v*app.stage.scale.x;}});
+		Object.defineProperty(This.view, 'y', {get:function(){return View.y;}, set:function(v){View.y = v;app.stage.y = -v*app.stage.scale.y;}});
+		
+		//Screen width\height on window
+		Object.defineProperty(This.screen, 'width', {get:function(){return Screen.width;}, set:function(v){Screen.width = v;app.renderer.resize(v, Screen.height);app.stage.scale.x = app.renderer.width/This.view.width;}});
+		Object.defineProperty(This.screen, 'height', {get:function(){return Screen.height;}, set:function(v){Screen.height = v;app.renderer.resize(Screen.width, v);app.stage.scale.y = app.renderer.height/This.view.height;}});
 		
 		//Create game application frame
-		var app = new Application(View);
-		//console.log(app);
-		// create algorithm
-		// app.stage.x; app.stage.y; //view position in room
-		// app.renderer.resize(width, height); //view port
+		var app = new Application(This.room);
 		app.stage.updateLayersOrder = function () {
 			app.stage.children.sort(function(a,b) {
 				a.zIndex = a.zIndex || 0;
@@ -64,8 +82,17 @@ var GMJS = new (function(){'use strict';
 			});
 		};
 		
+		
 		//Create game on screen
 		document.body.appendChild(app.view);
+		
+		//Set screen resolution/game port settings
+		This.view.x = ('x' in Params.view)?Params.view.x:0;
+		This.view.y = ('y' in Params.view)?Params.view.y:0;
+		This.view.width = ('width' in Params.view)?Params.view.width:This.room.width;
+		This.view.height = ('height' in Params.view)?Params.view.height:This.room.height;
+		This.screen.width = ('width' in Params.screen)?Params.screen.width:This.view.width;
+		This.screen.height = ('height' in Params.screen)?Params.screen.height:This.view.height;
 		
 		function loadTextures(list){
 			function createFrame(tx, tile){
@@ -477,7 +504,6 @@ var GMJS = new (function(){'use strict';
 		function controller_step(){}
 		function publish(){
 			This.object = object;
-			This.room = room;
 			This.collision_with = collision_with;
 			This.collision_point = collision_point;
 			This.collision_bounce = collision_bounce;
