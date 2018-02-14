@@ -301,6 +301,7 @@ window.onload = function(){'use strict';
 				t.shield = 50; //steps for invincibility after hit
 				t.reset_hit_rate = function(){t.image_alpha = t.hit;t.hit = false;t.flash = 0;t.hit_rate = Math.round(t.shield);}
 				t.reset_hit_rate();
+				t.image_alpha = 1;
 				t.canshoot = true;
 				t.spd = 3;
 				t.xscale = 0.5;
