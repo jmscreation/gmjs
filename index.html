@@ -139,10 +139,13 @@ window.onload = function(){'use strict';
 				{name:'create_player', code:function(t){t.player = Character.instance_create(g.room.width/2, g.room.height/2);}},
 				{name:'create_enemy', code:function(t){var tm = 0;
 					t.create_enemy.time = Math.max(100 + Math.random()*(1500 - t.kills), 50);
-					var repeat = Math.max(Math.round(Math.random()*(t.kills/5)), 1);
-					for(var r = 0; r < repeat; r++) do {var xx = 64 + Math.random()*(g.room.width - 128), yy = 64 + Math.random()*(g.room.height - 128);
-					if(tm++>100)return;} while (g.collision_point(xx, yy, CollisionObjects));
-					Enemy.instance_create(xx, yy);difficulty = Math.min(5, difficulty + Math.random()/(15 - ((t.player)?t.player.points:0)));}}
+					var rp = Math.max(Math.round(Math.random()*(t.kills/5)), 1);
+					for(var r = 0; r < rp; r++){
+						do {var xx = 64 + Math.random()*(g.room.width - 128), yy = 64 + Math.random()*(g.room.height - 128);
+						if(tm++>100*rp)return;} while (g.collision_point(xx, yy, CollisionObjects));
+						Enemy.instance_create(xx, yy);difficulty = Math.min(5, difficulty + Math.random()/(15 - ((t.player)?t.player.points:0)));
+					}}
+				}
 				]
 			});
 		var GatherObjects = new g.object({
