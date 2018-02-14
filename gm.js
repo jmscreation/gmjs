@@ -1,6 +1,6 @@
 /* ------------------------------------------ //
 					GM-JS
-			Version: 0.3.4
+			Version: 0.3.5
 			Author: jmscreator
 			License: Free to use (See GPL License)
 			
@@ -82,7 +82,7 @@ var GMJS = new (function(){'use strict';
 			});
 		};
 		
-		
+		console.log(app);
 		//Create game on screen
 		document.body.appendChild(app.view);
 		
@@ -153,7 +153,7 @@ var GMJS = new (function(){'use strict';
 		var _DepthChanged = false,
 		room = app.screen,
 		keyboard = new nimble.Keyboard(),
-		mouse = new nimble.Mouse(),
+		mouse = new nimble.Mouse(app.view),
 		object_table = [];
 		
 		keyboard.steps = true;
@@ -263,6 +263,10 @@ var GMJS = new (function(){'use strict';
 				if(checkCollision({x:xx, y:yy, width:1, height:1}, ii.mask)) list.push(ii);
 			});
 			return list.length?list:false;
+		},
+		instance_exists = function(instance){
+			if(!instance) return false;
+			return !instance.destroyed;
 		},
 		collision_bounce = function(t, other){
 			if('radius' in t.mask){
@@ -499,10 +503,14 @@ var GMJS = new (function(){'use strict';
 			//Update Keyboard/Mouse
 			keyboard.stepclear();
 			mouse.stepclear();
+			This.mouse_x = (mouse.x + This.view.x)*app.stage.scale.x;
+			This.mouse_y = (mouse.y + This.view.y)*app.stage.scale.y;
 		}
 
 		function controller_step(){}
 		function publish(){
+			This.mouse_x = 0;
+			This.mouse_y = 0;
 			This.object = object;
 			This.collision_with = collision_with;
 			This.collision_point = collision_point;
@@ -510,6 +518,7 @@ var GMJS = new (function(){'use strict';
 			This.With = _with;
 			This.get_object = get_object;
 			This.get_instance = get_instance;
+			This.instance_exists = instance_exists;
 			This.keyboard = keyboard;
 			This.mouse = mouse;
 			This.mouse_click = mouse_click;
@@ -528,6 +537,15 @@ var GMJS = new (function(){'use strict';
 			publish();
 			GameStart();
 			app.ticker.add(mainLoop);
+			/*var a = function(){
+				var begin, end;
+				begin = performance.now();
+				mainLoop();
+				end = performance.now();
+				var delta = end - begin;
+				setTimeout(a, Math.max(1000/60 - delta, 0.00000001));
+			};
+			a();*/
 		}
 	}
 })();
