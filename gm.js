@@ -1,6 +1,6 @@
 /* ------------------------------------------ //
 					GM-JS
-			Version: 0.3.5
+			Version: 0.4.0
 			Author: jmscreator
 			License: Free to use (See GPL License)
 			
@@ -26,9 +26,11 @@ var GMJS = new (function(){'use strict';
 		TextureCache = PIXI.utils.TextureCache,
 		Texture = PIXI.Texture,
 		BaseTexture = PIXI.BaseTexture,
+		Sound = PIXI.sound,
 		loader = PIXI.loader,
 		resources = PIXI.loader.resources;
-		
+	const dtr = Math.PI / 180;
+	const rtd = 1/dtr;
 	var in_array = function(keys, array){ // Returns if all keys are in an array
 		if(typeof(array) != 'object') return false;
 		if(typeof(keys) == 'string') return keys in array;
@@ -45,7 +47,8 @@ var GMJS = new (function(){'use strict';
 		//Setup game initialization parameters
 		var GameStart = Params['onStart']||function(){},
 		GameEnd = Params['onEnd'] || function(){},
-		Images = Params['images'] || [];
+		Images = Params['images'] || [],
+		Sounds = Params['sounds'] || [];
 		
 		Params['room'] = Params['room'] || {},
 		Params['view'] = Params['view'] || {}
@@ -95,6 +98,7 @@ var GMJS = new (function(){'use strict';
 		This.screen.width = ('width' in Params.screen)?Params.screen.width:This.view.width;
 		This.screen.height = ('height' in Params.screen)?Params.screen.height:This.view.height;
 		
+		
 		function loadTextures(list){
 			function createFrame(tx, tile){
 				if(!in_array(['x', 'y', 'w', 'h'], tile)) return false;
@@ -128,6 +132,14 @@ var GMJS = new (function(){'use strict';
 				}
 				i.texture = tex;
 			}
+		}
+		
+		//Import Sounds
+		for(var snd in Sounds){
+			var i = Sounds[snd];
+			if(!('path' in i)) {console.error('Failed loading sound resource - ', i);continue;}
+			if(!('name' in i)) {console.error('Failed to load a sound resource with no name - ');continue;}
+			loader.add(i.name, i.path);
 		}
 		
 		//Import textures
@@ -200,8 +212,18 @@ var GMJS = new (function(){'use strict';
 			return l;
 		},
 		get_instance = function(obj, id){
-			var l = get_instances(obj);
+			var l = get_instances(obj);id = id || 0;
 			return (!!l[id])?l[id]:false;
+		},
+		sound_play = function(snd, opt){
+			opt = opt || {};
+			return resources[snd].sound.play(opt);
+		},
+		sound_volume = function(snd, vol){
+			return resources[snd].sound.volume = vol;
+		},
+		sound_length = function(snd){
+			return resources[snd].sound.duration;
 		},
 		_with = function(obj, scope){
 			var l = get_instances(obj);
@@ -233,6 +255,16 @@ var GMJS = new (function(){'use strict';
 			if(op(mb)){
 				return (checkCollision({x:mouse.x, y:mouse.y, width:1, height:1}, t.sprite));
 			}
+		},
+		point_direction = function(x,y,xx,yy){
+			return Math.atan2(y - yy, xx - x) * rtd;
+		},
+		point_distance = function(x, y, xx, yy){
+			var xd = Math.abs(xx - x), yd = Math.abs(yy - y);
+			return Math.sqrt(xd**2 + yd**2);
+		},
+		vector_direction = function(dir){
+			dir *= dtr;return [Math.cos(dir), -Math.sin(dir)];
 		},
 		checkCollision = function(r1, r2){
 			if(r1 === r2) return false;
@@ -397,11 +429,15 @@ var GMJS = new (function(){'use strict';
 			
 			t.graphics = new Graphics();
 			t.graphics.zIndex = depth;
+			t.graphics.drawLine = function(x, y, xx, yy){
+				t.graphics.moveTo(x, y);
+				t.graphics.lineTo(xx, yy);
+			}
 			Object.defineProperty(t.graphics, 'depth', {get:function(){return t.graphics.zIndex;}, set:function(x){_DepthChanged = _DepthChanged || (t.graphics.zIndex != x);t.graphics.zIndex = x;}});
 			app.stage.addChild(t.graphics);
 			
 			Object.defineProperty(t, 'image_alpha', {get:function(){return image_alpha;}, set:function(x){image_alpha = Math.max(Math.min(x, 1), 0);t.sprite.alpha = image_alpha;}});
-			Object.defineProperty(t, 'image_angle', {get:function(){return image_angle;}, set:function(x){image_angle = x;t.sprite.rotation = (image_angle)*Math.PI/180;}});
+			Object.defineProperty(t, 'image_angle', {get:function(){return image_angle;}, set:function(x){image_angle = x;t.sprite.rotation = (image_angle)*dtr;}});
 			Object.defineProperty(t, 'xscale', {get:function(){return xscale;}, set:function(x){xscale = x;t.sprite.scale.x = x;if(!obj.mask) updateMask();}});
 			Object.defineProperty(t, 'yscale', {get:function(){return yscale;}, set:function(x){yscale= x;t.sprite.scale.y = x;if(!obj.mask) updateMask();}});
 			Object.defineProperty(t, 'x', {get:function(){return x;}, set:function(v){x = v;t.sprite.x = v; t.mask.x = v + t.mask.xoff;}});
@@ -551,6 +587,12 @@ var GMJS = new (function(){'use strict';
 			This.collision_with = collision_with;
 			This.collision_point = collision_point;
 			This.collision_bounce = collision_bounce;
+			This.vector_direction = vector_direction;
+			This.point_direction = point_direction;
+			This.point_distance = point_distance;
+			This.sound_play = sound_play;
+			This.sound_volume = sound_volume;
+			This.sound_length = sound_length;
 			This.With = _with;
 			This.background = background;
 			This.get_object = get_object;

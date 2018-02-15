@@ -5,13 +5,14 @@
 		<meta charset="utf-8"/>
 		<script src="nimble.js" type="text/javascript"></script>
 		<script src="pixi.js" type="text/javascript"></script>
+		<script src="pixi-sound.js" type="text/javascript"></script>
 		<script src="gm.js" type="text/javascript"></script>
 	</head>
 	<body>
 		<script type="text/javascript">
 /*
 	This is a game created for testing GM-JS
-	Version 1.4.0
+	Version 1.4.3
 */
 oncontextmenu = function(){return false;};
 window.onload = function(){'use strict';
@@ -25,6 +26,16 @@ window.onload = function(){'use strict';
 		{name:'spr_health', path:'images/health.png'},
 		{name:'spr_bullet', path:'images/bullet.png'},
 		{name:'bck_background', path:'images/background.png'}];
+	//Setup sounds
+	var Sounds = [{name:'snd_lazer', path:'sounds/lazer.mp3'},
+	{name:'snd_break', path:'sounds/break.mp3'},
+	{name:'snd_punch', path:'sounds/punch.mp3'},
+	{name:'snd_zap', path:'sounds/zap.mp3'},
+	{name:'snd_death', path:'sounds/death.mp3'},
+	{name:'snd_kill', path:'sounds/kill.mp3'},
+	{name:'snd_treasure', path:'sounds/treasure.mp3'},
+	{name:'snd_shield', path:'sounds/shield.mp3'},
+	{name:'snd_health', path:'sounds/health.mp3'}];
 	
 	//Sets the game room to window size
 	//Math.round(window.innerWidth/32)*32
@@ -34,6 +45,7 @@ window.onload = function(){'use strict';
 		GMJS.StartGameEngine({
 			onStart:GameInit,
 			images:Sprites,
+			sounds:Sounds,
 			room:{width:480, height:608},
 			view:{width:400, height:450}
 		});
@@ -57,6 +69,10 @@ window.onload = function(){'use strict';
 	function GameInit(){
 		//Setup Global Variables
 		var difficulty = 0;
+		//Change some things
+		g.sound_volume('snd_shield', 0.5);
+		g.sound_volume('snd_treasure', 0.6);
+		
 		//Setup Fonts
 		var PlayerFont = g.create_text_style({fontFamily: 'Arial', fontSize: 10, fill:0xFFFFFF});
 		//Setup Objects
@@ -115,7 +131,7 @@ window.onload = function(){'use strict';
 					}
 				},
 				end_step:function(t){
-				var a = 0.6;
+				var a = 0.4;
 					if(t.debug && !t.edit){
 						g.With(Enemy, function(ii){
 							t.graphics.beginFill((g.collision_point(ii.x - 32, ii.y, CollisionObjects))?0xFF0000:0xFFFFFF, a);
@@ -130,6 +146,16 @@ window.onload = function(){'use strict';
 						t.graphics.beginFill(0X444444, a);
 						if(g.instance_exists(t.player)){
 							t.graphics.drawCircle(t.player.x, t.player.y, t.player.mask.radius);
+							t.graphics.lineStyle(4, 0x333333, a);
+							t.graphics.drawLine(0,0,t.player.x, t.player.y);
+							t.graphics.drawLine(g.room.width,0,t.player.x, t.player.y);
+							t.graphics.drawLine(0,g.room.height,t.player.x, t.player.y);
+							t.graphics.drawLine(g.room.width,g.room.height,t.player.x, t.player.y);
+							t.graphics.lineStyle(2, 0x777777, a);
+							var v = g.vector_direction(t.player.direction), dist = 48;
+							t.graphics.drawLine(t.player.x, t.player.y, t.player.x + v[0]*dist, t.player.y + v[1]*dist);
+							t.graphics.lineStyle(2, 0x992222, a);
+							t.graphics.drawLine(t.player.x, t.player.y, t.player.x + t.player.debug[0][0]*t.player.debug[1]*100, t.player.y + t.player.debug[0][1]*t.player.debug[1]*100);
 						}
 					}
 					if(g.instance_exists(t.player) && !t.edit){
@@ -137,6 +163,7 @@ window.onload = function(){'use strict';
 						g.view.y = Math.max(0, Math.min(g.room.height - g.view.height, t.player.y - g.view.height / 2));
 						t.draw_kills.x = g.view.x + 8;
 						t.draw_kills.y = g.view.y + 8;
+						t.graphics.lineStyle();
 						t.graphics.beginFill(0X444444);
 						t.graphics.drawRect(g.view.x, g.view.y, 128, 16);
 					}
@@ -181,6 +208,9 @@ window.onload = function(){'use strict';
 				image:'spr_bullet',
 				mask:{x:0,y:0,w:8,h:8},
 				creation:function(t){
+					var p = g.get_instance(Character),
+					dist = g.point_distance(t.x, t.y, p.x, p.y);
+					if(dist < 400) g.sound_play('snd_lazer', {volume:Math.min(0.75, Math.max(0, Math.min(1, 40/dist)))});
 					t.xscale = 0.25;
 					t.yscale = 0.25;
 					t.spd = 8;
@@ -188,13 +218,7 @@ window.onload = function(){'use strict';
 					t.dir = [0,0,0,0];//lrud
 				},
 				step:function(t){
-					t.image_angle = (t.dir[0])?-90 + 45*t.dir[2] - 45*t.dir[3]:45*t.dir[1] - 45*t.dir[0];
-					if(t.dir[3]){
-						t.image_angle = 180 - 45*t.dir[1] + 45*t.dir[0];
-					}
-					if(t.dir[1]){
-						t.image_angle = 90 - 45*t.dir[2] + 45*t.dir[3];
-					}
+					t.image_angle = (t.dir[3])?(180 - 45*t.dir[1] + 45*t.dir[0]):((t.dir[1])?(90 - 45*t.dir[2]):((t.dir[0])?(-90 + 45*t.dir[2]):0));
 					if(t.image_alpha < 1) t.image_alpha += 0.25;
 					t.depth = g.room.height - t.y;
 					if(t.dir[0]) t.x -= t.spd;
@@ -205,6 +229,9 @@ window.onload = function(){'use strict';
 				collision:[
 					{object:CollisionObjects, code:function(t, other){
 						t.instance_destroy();
+						var p = g.get_instance(Character),
+						dist = g.point_distance(t.x, t.y, p.x, p.y);
+						if(dist < 400) g.sound_play('snd_break').volume = Math.max(0, Math.min(1, 26/dist));
 					}}
 				]
 			});
@@ -276,17 +303,25 @@ window.onload = function(){'use strict';
 			collision:[
 				{object:CollisionObjects, code:function(t, other){g.collision_bounce(t, other);if(t.reset_motion.time>10)t.reset_motion.time = 10;}},
 				{object:Bullet, code:function(t, other){
+					var p = g.get_instance(Character),
+					dist = g.point_distance(other.x, other.y, p.x, p.y);
+					if(dist < 400) g.sound_play('snd_punch', {volume:Math.max(0, Math.min(1, 64/dist))});
 					other.instance_destroy();
 					t.health-= (10 + Math.random(20))/t.power;
-					if(t.health < 0) {t.health = 0;t.instance_destroy();Cont.instances[0].kills++;}
+					if(t.health < 0) {t.health = 0;t.instance_destroy();Cont.instances[0].kills++;
+						g.sound_play('snd_kill', {volume:Math.max(0, Math.min(1, 48/dist)), speed:1.1});return false;}
 				}}, {object:ItemObjects, code:function(t, other){
 					if(other.image_alpha < 1) return;
 					other.instance_destroy();
+					var p = g.get_instance(Character),
+					dist = g.point_distance(other.x, other.y, p.x, p.y),
+					snd;
 					switch(other.object_index){
-						case TreasureBox: break;
-						case HealthItem: t.health = Math.min(t.health + 25, 100);break;
-						case ShieldItem: break;
+						case TreasureBox: snd='snd_treasure';break;
+						case HealthItem: snd='snd_health';t.health = Math.min(t.health + 25, 100);break;
+						case ShieldItem: snd='snd_shield';break;
 					}
+					if(dist < 350 && snd) g.sound_play(snd, {volume:Math.max(0, Math.min(1, 30/dist))});
 				}}
 			]
 		});	
@@ -309,13 +344,14 @@ window.onload = function(){'use strict';
 				t.points = 0;
 				t.health = 100;
 				t.shield = 50; //steps for invincibility after hit
-				t.reset_hit_rate = function(){t.image_alpha = t.hit;t.hit = false;t.flash = 0;t.hit_rate = Math.round(t.shield);}
+				t.reset_hit_rate = function(){if(t.hit) t.snd_zap.stop();t.image_alpha = t.hit;t.hit = false;t.flash = 0;t.hit_rate = Math.round(t.shield);}
 				t.reset_hit_rate();
 				t.image_alpha = 1;
 				t.canshoot = true;
 				t.spd = 3;
 				t.xscale = 0.5;
 				t.yscale = 0.5;
+				t.direction = 0;
 				t.up = false;t.down = false;t.left = false;t.right = false;
 				t.last_dir = [0,1,0,0]; //[left, right, up, down]
 			},
@@ -324,23 +360,35 @@ window.onload = function(){'use strict';
 					t.image_alpha = t.flash;
 				}
 				if(t.health <= 0){
+					t.reset_hit_rate();
+					g.sound_play('snd_death');
 					t.instance_destroy();
 					g.With(Cont, function(tt){
 						tt.create_player.time = 100;
 					});
 					return;
 				}
+				
 				t.depth = g.room.height - t.y;
 				t.graphics.depth = t.depth - 1;
 				t.up = g.keyboard.up;
 				t.down = (g.keyboard.down && !t.up);
 				t.left = g.keyboard.left;
 				t.right = (g.keyboard.right && !t.left);
-				if(t.left || t.right || t.up || t.down) t.last_dir = [t.left, t.right, t.up, t.down];
+				var moving;
+				if(moving = (t.left || t.right || t.up || t.down)) t.last_dir = [t.left, t.right, t.up, t.down];
+				var dir = t.last_dir;
+				t.direction = (dir[3])?(270 + 45*dir[1] - 45*dir[0]):((dir[1])?(45*dir[2]):((dir[0])?(-180 - 45*dir[2]):90));
+				var grav = g.vector_direction(g.point_direction(t.x, t.y, g.room.width/2, g.room.height/2)),
+				pull = Math.sqrt(g.point_distance(t.x, t.y, g.room.width/2, g.room.height/2)*10) / 100;
+				t.debug = [grav, pull];
+				
 				if(t.up){t.y -= t.spd;}
 				if(t.down){t.y += t.spd;}
 				if(t.left){t.x -= t.spd;}
 				if(t.right){t.x += t.spd;}
+				t.x += grav[0]*pull;
+				t.y += grav[1]*pull;
 				if(g.keyboard.control && t.canshoot){
 					t.canshoot = false;t.reset_shoot.time = Math.max(20 - t.points, 4);
 					var ii=Bullet.instance_create(t.x + (t.last_dir[0]*-16) + (t.last_dir[1]*16), t.y + (t.last_dir[2]*-16) + (t.last_dir[3]*16));
@@ -357,13 +405,15 @@ window.onload = function(){'use strict';
 					if(other.image_alpha < 1) return;
 					other.instance_destroy();
 					switch(other.object_index){
-						case TreasureBox: t.points ++;break;
-						case HealthItem: t.health = Math.min(t.health + 25, 100);break;
-						case ShieldItem: t.shield = Math.min(t.shield + 10, 50);break;
+						case TreasureBox: g.sound_play('snd_treasure');t.points ++;break;
+						case HealthItem: g.sound_play('snd_health');t.health = Math.min(t.health + 25, 100);break;
+						case ShieldItem: g.sound_play('snd_shield');t.shield = Math.min(t.shield + 10, 50);break;
 					}
 				}},
 				{object:Enemy, code:function(t, other){
 					if(!t.hit){
+						t.snd_zap = g.sound_play('snd_zap', {speed:1.15, volume:0.7});
+						//console.log(d, (t.shield/50), p.end);
 						t.hit = true;
 						t.hit_flash.time = 5;
 						t.health-= (1 + 4*Math.random())*other.power;
