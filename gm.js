@@ -477,11 +477,7 @@ var GMJS = new (function(){'use strict';
 			x = 0,y = 0,
 			xscale = 1,yscale = 1;
 			
-			//('origin' in args)?args.origin:{w:0, h:0}
-			
-			console.log(t);
 			t.image = ('image' in args)?args.image:'';
-			
 			t.origin = {};
 			
 			Object.defineProperty(t, 'x', {get:function(){return x;}, set:function(v){x = v;t.sprite.position.x = v}});

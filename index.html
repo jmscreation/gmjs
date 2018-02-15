@@ -81,7 +81,7 @@ window.onload = function(){'use strict';
 					t.starttimers(true);
 				},
 				step:function(t){
-					Background.yscale = Background.xscale = 0.3 + Math.sin((t.tm++)/100)/4;
+					Background.yscale = Background.xscale = 0.5 + Math.sin((t.tm++)/200)/20;
 					if(g.instance_exists(t.player)){
 						t.draw_kills.text = 'Kills: ' + t.kills.toString() + '  Points: '+t.player.points.toString();
 					}
