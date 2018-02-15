@@ -21,6 +21,7 @@ var GMJS = new (function(){'use strict';
 		TextStyle = PIXI.TextStyle,
 		Sprite = PIXI.Sprite,
 		AnimSprite = PIXI.extras.AnimatedSprite,
+		TilingSprite = PIXI.extras.TilingSprite,
 		Rectangle = PIXI.Rectangle,
 		TextureCache = PIXI.utils.TextureCache,
 		Texture = PIXI.Texture,
@@ -401,8 +402,8 @@ var GMJS = new (function(){'use strict';
 			
 			Object.defineProperty(t, 'image_alpha', {get:function(){return image_alpha;}, set:function(x){image_alpha = Math.max(Math.min(x, 1), 0);t.sprite.alpha = image_alpha;}});
 			Object.defineProperty(t, 'image_angle', {get:function(){return image_angle;}, set:function(x){image_angle = x;t.sprite.rotation = (image_angle)*Math.PI/180;}});
-			Object.defineProperty(t, 'xscale', {get:function(){return xscale;}, set:function(x){xscale = x;t.sprite.scale.y = x;if(!obj.mask) updateMask();}});
-			Object.defineProperty(t, 'yscale', {get:function(){return yscale;}, set:function(x){yscale= x;t.sprite.scale.x = x;if(!obj.mask) updateMask();}});
+			Object.defineProperty(t, 'xscale', {get:function(){return xscale;}, set:function(x){xscale = x;t.sprite.scale.x = x;if(!obj.mask) updateMask();}});
+			Object.defineProperty(t, 'yscale', {get:function(){return yscale;}, set:function(x){yscale= x;t.sprite.scale.y = x;if(!obj.mask) updateMask();}});
 			Object.defineProperty(t, 'x', {get:function(){return x;}, set:function(v){x = v;t.sprite.x = v; t.mask.x = v + t.mask.xoff;}});
 			Object.defineProperty(t, 'y', {get:function(){return y;}, set:function(v){y = v;t.sprite.y = v; t.mask.y = v + t.mask.yoff;}});
 			Object.defineProperty(t, 'image_single', {get:function(){return image_single;}, set:(!!t.sprite.play)?function(x){image_single = x;if(x == -1) t.sprite.play(); else t.sprite.gotoAndStop(x);}:function(){}});
@@ -469,7 +470,46 @@ var GMJS = new (function(){'use strict';
 			t.instance_number = function(){
 				return get_instances(t).length;
 			}
-		}
+		},
+		background = function(args){
+			var t = this;
+			var	origin = {},
+			x = 0,y = 0,
+			xscale = 1,yscale = 1;
+			
+			//('origin' in args)?args.origin:{w:0, h:0}
+			
+			console.log(t);
+			t.image = ('image' in args)?args.image:'';
+			
+			t.origin = {};
+			
+			Object.defineProperty(t, 'x', {get:function(){return x;}, set:function(v){x = v;t.sprite.position.x = v}});
+			Object.defineProperty(t, 'y', {get:function(){return y;}, set:function(v){y = v;t.sprite.position.y = v;}});
+			Object.defineProperty(t, 'xscale', {get:function(){return xscale;}, set:function(x){xscale = x;t.sprite.tileScale.x = x;}});
+			Object.defineProperty(t, 'yscale', {get:function(){return yscale;}, set:function(x){yscale= x;t.sprite.tileScale.y = x;}});
+			Object.defineProperty(t.origin, 'x', {get:function(){return origin.x;}, set:function(v){origin.x = v;t.sprite.tilePosition.x = v;}});
+			Object.defineProperty(t.origin, 'y', {get:function(){return origin.y;}, set:function(v){origin.y = v;t.sprite.tilePosition.y = v;}});
+			
+			var texture;
+			for(var tx in TexList){
+				if(TexList[tx].name == t.image){
+					texture = TexList[tx].texture;
+					break;
+				}
+			}
+			
+			t.sprite = new TilingSprite(texture,This.room.width, This.room.height);
+			t.sprite.zIndex = 9999999999;
+			
+			t.x = ('position' in args)?args.position.x || 0:0;
+			t.y = ('position' in args)?args.position.y || 0:0;
+			t.origin.x = ('origin' in args)?args.origin.x || 0:0;
+			t.origin.y = ('origin' in args)?args.origin.y || 0:0;
+			
+			app.stage.addChild(t.sprite);
+		};
+		
 		
 		function mainLoop(delta){
 			for(var o in object_table){
@@ -516,6 +556,7 @@ var GMJS = new (function(){'use strict';
 			This.collision_point = collision_point;
 			This.collision_bounce = collision_bounce;
 			This.With = _with;
+			This.background = background;
 			This.get_object = get_object;
 			This.get_instance = get_instance;
 			This.instance_exists = instance_exists;

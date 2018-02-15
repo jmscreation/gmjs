@@ -23,7 +23,8 @@ window.onload = function(){'use strict';
 		{name:'spr_wall', path:'images/wall.png'},
 		{name:'spr_shield', path:'images/shield.png'},
 		{name:'spr_health', path:'images/health.png'},
-		{name:'spr_bullet', path:'images/bullet.png'}];
+		{name:'spr_bullet', path:'images/bullet.png'},
+		{name:'bck_background', path:'images/background.png'}];
 	
 	//Sets the game room to window size
 	//Math.round(window.innerWidth/32)*32
@@ -59,6 +60,10 @@ window.onload = function(){'use strict';
 		//Setup Fonts
 		var PlayerFont = g.create_text_style({fontFamily: 'Arial', fontSize: 10, fill:0xFFFFFF});
 		//Setup Objects
+		var Background = new g.background({
+			image:'bck_background',
+			origin:{x:g.room.width/2, y:g.room.height/2}
+		});
 		var Cont = new g.object({
 				name:'controller',
 				creation:function(t){
@@ -72,9 +77,11 @@ window.onload = function(){'use strict';
 						t.create_enemy.time = (100)*start;}
 					t.kills = 0;
 					t.player = null;
+					t.tm = 0;
 					t.starttimers(true);
 				},
 				step:function(t){
+					Background.yscale = Background.xscale = 0.3 + Math.sin((t.tm++)/100)/4;
 					if(g.instance_exists(t.player)){
 						t.draw_kills.text = 'Kills: ' + t.kills.toString() + '  Points: '+t.player.points.toString();
 					}
