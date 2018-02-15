@@ -7,13 +7,14 @@ Note: In using this wrapper, you fully acknowledge that there are known performa
 </p>
 <p>
 Requirements:<br>
-PIXI.js*<br>
-Nimble.js (HID input library)*<br>
+pixi.js*<br>
+pixi-sound*<br>
+nimble.js*<br>
 *Included in repository
 </p>
 <br>
 <p>Due to the nature of PIXI's resource loader, you must host the files on a mini-webserver in order to play the game.</p>
-<p>I did not make any of the included files; however they are just requirements for the GMJS wrapper.</p>
+<p>I did not make any of the included requirements. These files are required for the GMJS wrapper to function properly.</p>
 <br>
 <br>
 <p>
