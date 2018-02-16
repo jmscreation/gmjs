@@ -263,6 +263,10 @@ var GMJS = new (function(){'use strict';
 			var xd = Math.abs(xx - x), yd = Math.abs(yy - y);
 			return Math.sqrt(xd**2 + yd**2);
 		},
+		direction_vector = function(dir, tdir){
+			var ang = (((tdir - dir)%360+360)%360);
+			return (ang <= 180)*2-1-(ang == 0);
+		},
 		vector_direction = function(dir){
 			dir *= dtr;return [Math.cos(dir), -Math.sin(dir)];
 		},
@@ -587,6 +591,7 @@ var GMJS = new (function(){'use strict';
 			This.collision_with = collision_with;
 			This.collision_point = collision_point;
 			This.collision_bounce = collision_bounce;
+			This.direction_vector = direction_vector;
 			This.vector_direction = vector_direction;
 			This.point_direction = point_direction;
 			This.point_distance = point_distance;
