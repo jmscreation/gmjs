@@ -12,7 +12,7 @@
 		<script type="text/javascript">
 /*
 	This is a game created for testing GM-JS
-	Version 1.4.4
+	Version 1.4.5
 */
 oncontextmenu = function(){return false;};
 window.onload = function(){'use strict';
@@ -184,12 +184,8 @@ window.onload = function(){'use strict';
 				},{name:'create_blackhole', code:function(t){var off = 32;if(Math.round(Math.random())){var xx = Math.random()*g.room.width;var yy = (Math.round(Math.random()))?-off:g.room.height + off;} else {xx = (Math.round(Math.random()))?-off:g.room.width + off;yy = Math.random()*g.room.height;};t.create_blackhole.time = 2000 + Math.random()*25000; Blackhole.instance_create(xx, yy);}}
 				]
 			});
-		var GatherObjects = new g.object({
-				name:'gather_objects'
-			});
 		var CollisionObjects = new g.object({
-			name:'collision_objects',
-			parent:GatherObjects
+			name:'collision_objects'
 		});
 		var ItemObjects = new g.object({
 			name:'ItemPar',
@@ -203,7 +199,7 @@ window.onload = function(){'use strict';
 			step:function(t){
 				if(t.image_alpha < 1) t.image_alpha += 0.02;
 			},
-			collision:[{object:GatherObjects, code:function(t,other){if(other.object_index == Wall) t.instance_destroy();}}]
+			collision:[{object:CollisionObjects, code:function(t,other){if(other.object_index == Wall) t.instance_destroy();}}]
 		});
 		var Bullet = new g.object({
 				name:'Bullet',
@@ -226,7 +222,7 @@ window.onload = function(){'use strict';
 					t.depth = g.room.height - t.y;
 					g.With(Blackhole, function(bh){
 						var tdir = g.point_direction(t.x, t.y, bh.x, bh.y);
-						t.direction += g.direction_vector(t.direction, tdir)*(Math.abs(t.direction - tdir)/(g.point_distance(t.x, t.y, bh.x, bh.y)/2))*bh.image_alpha;
+						t.direction += g.direction_sign(t.direction, tdir)*(Math.abs(t.direction - tdir)/(g.point_distance(t.x, t.y, bh.x, bh.y)/2))*bh.image_alpha;
 					});
 					
 					var d = g.vector_direction(t.direction);
@@ -285,7 +281,6 @@ window.onload = function(){'use strict';
 		var Enemy = new g.object({
 			image:'spr_enemy',
 			name:'Enemy',
-			parent:GatherObjects,
 			creation:function(t){
 				t.health = 100;
 				t.xscale = 0.5;
@@ -377,7 +372,6 @@ window.onload = function(){'use strict';
 			name:'Character',
 			image:'spr_character',
 			mask:{x:0,y:0,radius:16},
-			parent:GatherObjects,
 			creation:function(t){
 				console.log(t);
 				t.image_single = 6;

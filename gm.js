@@ -1,6 +1,6 @@
 /* ------------------------------------------ //
 					GM-JS
-			Version: 0.4.1
+			Version: 0.4.5
 			Author: jmscreator
 			License: Free to use (See GPL License)
 			
@@ -48,12 +48,14 @@ var GMJS = new (function(){'use strict';
 		var GameStart = Params['onStart']||function(){},
 		GameEnd = Params['onEnd'] || function(){},
 		Images = Params['images'] || [],
-		Sounds = Params['sounds'] || [];
+		Sounds = Params['sounds'] || [],
+		BeginStep = Params['beginStep'] || function(){},
+		EndStep = Params['endStep'] || function(){};
 		
 		Params['room'] = Params['room'] || {},
 		Params['view'] = Params['view'] || {}
 		Params['screen'] = Params['screen'] || {};
-		
+
 		var View = {},
 		Screen = {};
 		
@@ -263,9 +265,9 @@ var GMJS = new (function(){'use strict';
 			var xd = Math.abs(xx - x), yd = Math.abs(yy - y);
 			return Math.sqrt(xd**2 + yd**2);
 		},
-		direction_vector = function(dir, tdir){
+		direction_sign = function(dir, tdir){
 			var ang = (((tdir - dir)%360+360)%360);
-			return (ang <= 180)*2-1-(ang == 0);
+			return (ang == 180)? Math.round(Math.random())*2-1:(ang < 180)*2-1-(ang == 0);
 		},
 		vector_direction = function(dir){
 			dir *= dtr;return [Math.cos(dir), -Math.sin(dir)];
@@ -376,6 +378,7 @@ var GMJS = new (function(){'use strict';
 			
 			t.instance_destroy = function(){
 				t.destroyed = true;
+				t.inherited = obj.parent?obj.parent.obj_destroyed.bind(t,t):function(){};
 				obj.obj_destroyed(t);//Destroy Event
 				t.sprite.rendered = false;
 				_destroy = true;
@@ -383,6 +386,7 @@ var GMJS = new (function(){'use strict';
 			t.collision_code = function(){
 				for(var c in t.collision_objects){
 					if(_destroy) return;
+					t.inherited = function(){};
 					t.collision_objects[c]._run_step();//Collision Checking
 				}
 			};
@@ -392,9 +396,11 @@ var GMJS = new (function(){'use strict';
 				t.xprevious = t.x;
 				t.yprevious = t.y;
 				if(!t.sprite.renderable) t.sprite.renderable = true;
+				t.inherited = function(){};
 				for(var a in obj.alarms){//Alarm Event
 					t[obj.alarms[a].name]._run_step();
 				}
+				t.inherited = obj.parent?obj.parent.obj_step.bind(t,t):function(){};
 				obj.obj_step(t);//Step Event
 			};
 			t.end_step_code = function(){
@@ -405,6 +411,7 @@ var GMJS = new (function(){'use strict';
 					app.stage.removeChild(t.graphics);
 					return;
 				}
+				t.inherited = obj.parent?obj.parent.obj_end_step.bind(t,t):function(){};
 				obj.obj_end_step(t);//End Step Event
 			};
 			
@@ -454,6 +461,7 @@ var GMJS = new (function(){'use strict';
 			t.x = x;t.y = y; //Set new x,y coordinate
 			
 			_DepthChanged = true;
+			t.inherited = obj.parent?obj.parent.obj_create.bind(t,t):function(){};
 			obj.obj_create(t) //Creation Event
 		},
 		object = function(args){
@@ -493,12 +501,14 @@ var GMJS = new (function(){'use strict';
 			t.obj_end_step = ('end_step' in args)?args.end_step:((t.parent)?t.parent.obj_end_step:function(){});
 			t.obj_end_animation_step = ('end_animation_step' in args)?args.end_animation_step:((t.parent)?t.parent.obj_end_animation_step:function(){});
 			t.obj_destroyed = ('destroyed' in args)?args.destroyed:((t.parent)?t.parent.obj_destroyed:function(){})
-			t.alarms = ('alarms' in args)?args.alarms:((t.parent)?t.parent.alarms:[]);
-			t.collision = ('collision' in args)?args.collision:((t.parent)?t.parent.collision:[]);
+			t.alarms = ('alarms' in args)?args.alarms:[];
+			t.collision = ('collision' in args)?args.collision:[];
 			t.mask = ('mask' in args)?args.mask:((t.parent)?t.parent.mask:null);
 			//////-------------------------------------------//////
 			
 			if(t.parent){
+				[].push.apply(t.alarms, t.parent.alarms);//Inherit Alarms
+				var pt,cobs=t.collision.map(o=>o.object);for(var i in t.parent.collision)cobs.includes((pt=t.parent.collision[i]).object)||t.collision.push(pt);//Inherit Collision
 				t.parent.children.push(t); //Add child to parent
 			}
 			
@@ -548,6 +558,13 @@ var GMJS = new (function(){'use strict';
 		
 		
 		function mainLoop(delta){
+			//Update Mouse Coords
+			This.mouse_x = (mouse.x + This.view.x)*app.stage.scale.x;
+			This.mouse_y = (mouse.y + This.view.y)*app.stage.scale.y;
+			
+			//Global Step
+			BeginStep();
+			
 			for(var o in object_table){
 				var it = object_table[o].instances;
 				for(var instance in it){
@@ -573,17 +590,15 @@ var GMJS = new (function(){'use strict';
 				app.stage.updateLayersOrder();
 				_DepthChanged = false;
 			}
-			//Controller
-			controller_step();
 			
+			//Global Step
+			EndStep();
 			//Update Keyboard/Mouse
 			keyboard.stepclear();
 			mouse.stepclear();
-			This.mouse_x = (mouse.x + This.view.x)*app.stage.scale.x;
-			This.mouse_y = (mouse.y + This.view.y)*app.stage.scale.y;
+			
 		}
 
-		function controller_step(){}
 		function publish(){
 			This.mouse_x = 0;
 			This.mouse_y = 0;
@@ -591,7 +606,7 @@ var GMJS = new (function(){'use strict';
 			This.collision_with = collision_with;
 			This.collision_point = collision_point;
 			This.collision_bounce = collision_bounce;
-			This.direction_vector = direction_vector;
+			This.direction_sign = direction_sign;
 			This.vector_direction = vector_direction;
 			This.point_direction = point_direction;
 			This.point_distance = point_distance;
@@ -611,7 +626,6 @@ var GMJS = new (function(){'use strict';
 			This.mouse_check_released = mouse_check_released;
 			This.keyboard_check_pressed = keyboard_check_pressed;
 			This.keyboard_check_released = keyboard_check_released;
-			This.controller_step = controller_step;
 			This.create_text = create_text;
 			This.create_text_style = create_text_style;
 		}
