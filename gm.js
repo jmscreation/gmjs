@@ -1,6 +1,6 @@
 /* ------------------------------------------ //
 					GM-JS
-			Version: 0.4.5
+			Version: 0.4.8
 			Author: jmscreator
 			License: Free to use (See GPL License)
 			
@@ -127,8 +127,8 @@ var GMJS = new (function(){'use strict';
 						var tx = new Texture(BaseTexture.fromImage(i.path)); // Animation Textures
 						tex.push(tx);
 						var xx = (t % columns),
-						row = Math.floor(t / columns),
-						tile = {x:(xoff+w*xx+xsep*(!!xx)), y:(yoff+h*row+ysep*(!!t)*row), w:w, h:h};
+						yy = Math.floor(t / columns),
+						tile = {x:(xoff+(w+xsep)*xx), y:(yoff+(h+ysep)*yy), w:w, h:h};
 						createFrame(tx, tile);
 					}
 				}
@@ -285,7 +285,6 @@ var GMJS = new (function(){'use strict';
 			} else {
 				return (r1.x-r2.x)**2 + (r1.y-r2.y)**2 < (r1.radius+r2.radius)**2;
 			}
-
 		},
 		collision_with = function(t, o){
 			o = get_object(o);
@@ -308,15 +307,16 @@ var GMJS = new (function(){'use strict';
 			return !instance.destroyed;
 		},
 		collision_bounce = function(t, other){
+			var t_xoff = t.mask.xoff, t_yoff = t.mask.yoff,
+			o_xoff = other.mask.xoff, o_yoff = other.mask.yoff,
+			vx = t.xprevious+t_xoff-other.x-o_xoff, vy = t.yprevious+t_yoff-other.y-o_yoff;
 			if('radius' in t.mask){
-				var vx = t.xprevious-other.x, vy = t.yprevious-other.y,
-					dx=Math.abs(vx), dy=Math.abs(vy),
-					wd=t.mask.radius+other.mask.width/2, hd=t.mask.radius+other.mask.height/2;
-				
+				var dx=Math.abs(vx), dy=Math.abs(vy),
+				wd=t.mask.radius+other.mask.width/2, hd=t.mask.radius+other.mask.height/2;
 				if(dx<other.mask.width/2)
-					t.y = other.y + Math.sign(vy) * hd;
+					t.y = other.y+o_yoff + Math.sign(vy) * hd - t_yoff;
 				else if(dy<other.mask.height/2)
-					t.x = other.x + Math.sign(vx) * wd;
+					t.x = other.x+o_xoff + Math.sign(vx) * wd - t_xoff;
 				else {
 					vx -= Math.sign(vx)*other.mask.width/2;
 					vy -= Math.sign(vy)*other.mask.height/2;
@@ -325,11 +325,11 @@ var GMJS = new (function(){'use strict';
 					t.y -= vy*l;
 				}
 			} else {
-				var vx = t.xprevious-other.x, vy = t.yprevious-other.y, d1;
+				var d1;
 				if((d1=vx>vy) ^ (vx+vy>0))
-					t.y = other.y + (1-d1*2) * (t.mask.height+other.mask.height)/2;
+					t.y = other.y+o_yoff + (1-d1*2) * (t.mask.height+other.mask.height)/2;
 				else
-					t.x = other.x + (d1*2-1) * (t.mask.width+other.mask.width)/2;
+					t.x = other.x+o_xoff + (d1*2-1) * (t.mask.width+other.mask.width)/2;
 			}
 		},
 		instance = function(obj, x, y){
@@ -433,8 +433,8 @@ var GMJS = new (function(){'use strict';
 				t.sprite.animationSpeed = 0.5;
 				t.sprite.play();
 			}
-			t.sprite.anchor.x = 0.5;
-			t.sprite.anchor.y = 0.5;
+			t.sprite.anchor.x = obj.origin.x;
+			t.sprite.anchor.y = obj.origin.y;
 			t.sprite.renderable = false;
 			app.stage.addChild(t.sprite);
 			
@@ -495,6 +495,7 @@ var GMJS = new (function(){'use strict';
 			t.parent = ('parent' in args)?args.parent:null;
 			t.depth = ('depth' in args)?args.depth:0;
 			t.name = ('name' in args)?args.name:null;
+			t.origin = ('origin' in args)?args.origin:{x:0.5, y:0.5};
 			t.image = ('image' in args)?args.image:null;
 			t.obj_create = ('creation' in args)?args.creation:((t.parent)?t.parent.obj_create:function(){});
 			t.obj_step = ('step' in args)?args.step:((t.parent)?t.parent.obj_step:function(){});
