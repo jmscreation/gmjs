@@ -1,6 +1,6 @@
 /* ------------------------------------------ //
 					GM-JS
-			Version: 0.4.8
+			Version: 0.5.1
 			Author: jmscreator
 			License: Free to use (See GPL License)
 			
@@ -173,6 +173,44 @@ var GMJS = new (function(){'use strict';
 		
 		keyboard.steps = true;
 		mouse.steps = true;
+		var keyboard_char = '';
+		//Keyboard String Input
+		keyboard.on('down', function(e){
+			var chr = '';
+			if(e.key.length == 1){
+				chr = (keyboard.shift)?e.key:e.key.toLowerCase();
+				if(keyboard.shift){
+					switch(e.key){
+						case '1':chr = '!';break;
+						case '2':chr = '@';break;
+						case '3':chr = '#';break;
+						case '4':chr = '$';break;
+						case '5':chr = '%';break;
+						case '6':chr = '^';break;
+						case '7':chr = '&';break;
+						case '8':chr = '*';break;
+						case '9':chr = '(';break;
+						case '0':chr = ')';break;
+					}
+				}
+			} else {
+				switch(e.key){
+					case 'lbracket':chr = (keyboard.shift)?'{':'[';break;
+					case 'rbracket':chr = (keyboard.shift)?'}':']';break;
+					case 'semicolon':chr = (keyboard.shift)?':':';';break;
+					case 'quote':chr = (keyboard.shift)?'"':'\'';break;
+					case 'comma':chr = (keyboard.shift)?'<':',';break;
+					case 'period':chr = (keyboard.shift)?'>':'.';break;
+					case 'slash':chr = (keyboard.shift)?'?':'/';break;
+					case 'backslash':chr = (keyboard.shift)?'|':'\\';break;
+					case 'minus':chr = (keyboard.shift)?'_':'-';break;
+					case 'equals':chr = (keyboard.shift)?'+':'=';break;
+					case 'accent':chr = (keyboard.shift)?'~':'`';break;
+					case 'space':chr = ' ';break;
+				}
+			}
+			if(chr) keyboard_char = chr;
+		});
 		
 		//Setup in-game class functions
 		var create_text_style = function(style){
@@ -184,7 +222,7 @@ var GMJS = new (function(){'use strict';
 			var _text = new Text(str, style);
 			_text.zIndex = 0;
 			Object.defineProperty(_text, 'depth', {set:function(x){_DepthChanged = _DepthChanged || (_text.zIndex != x);_text.zIndex = x;}, get:function(){return _text.zIndex;}});
-			_text.align = function(a, b){b=b||1;switch(a){case 'center':_text.anchor.x = 0.5;_text.anchor.y = 0.5;return;case 'left':_text.anchor.x = 1-b/100;return;case 'right':_text.anchor.x = b/100;return;case 'top':_text.anchor.y = 1-b/100;case 'bottom':_text.anchor.y = b/100;}};
+			_text.align = function(a, b){b=b||100;switch(a){case 'center':_text.anchor.x = 0.5;_text.anchor.y = 0.5;return;case 'left':_text.anchor.x = 1-b/100;return;case 'right':_text.anchor.x = b/100;return;case 'top':_text.anchor.y = 1-b/100;case 'bottom':_text.anchor.y = b/100;}};
 			_text.x = x || 0;
 			_text.y = y || 0;
 			app.stage.addChild(_text);
@@ -235,6 +273,12 @@ var GMJS = new (function(){'use strict';
 		},
 		keyboard_check_pressed = function(key){
 			return !!keyboard.pressed[key];
+		},
+		keyboard_any = function(){
+			for(var k in keyboard.codes) if(keyboard[k]) return true;
+		},
+		keyboard_chr = function(){
+			var r = keyboard_char;keyboard_char = '';return r;
 		},
 		keyboard_check_released = function(key){
 			return !!keyboard.released[key];
@@ -332,7 +376,7 @@ var GMJS = new (function(){'use strict';
 					t.x = other.x+o_xoff + (d1*2-1) * (t.mask.width+other.mask.width)/2;
 			}
 		},
-		instance = function(obj, x, y){
+		instance = function(obj, x, y, opt){
 			var t = this;
 			//Local vars for instance
 			var _destroy = false,
@@ -424,7 +468,10 @@ var GMJS = new (function(){'use strict';
 				}
 			}
 			if(obj.image != null){
-				t.sprite = new AnimSprite(texture);
+				if(!obj.tiled)
+					t.sprite = new AnimSprite(texture);
+				else
+					t.sprite = new TilingSprite(texture[0], obj.tiled.w || 32, obj.tiled.h || 32);
 			} else {
 				t.sprite = new Sprite('');
 			}
@@ -436,6 +483,8 @@ var GMJS = new (function(){'use strict';
 			t.sprite.anchor.x = obj.origin.x;
 			t.sprite.anchor.y = obj.origin.y;
 			t.sprite.renderable = false;
+			t.depth = depth;
+			
 			app.stage.addChild(t.sprite);
 			
 			t.graphics = new Graphics();
@@ -460,9 +509,9 @@ var GMJS = new (function(){'use strict';
 			updateMask();
 			t.x = x;t.y = y; //Set new x,y coordinate
 			
-			_DepthChanged = true;
-			t.inherited = obj.parent?obj.parent.obj_create.bind(t,t):function(){};
-			obj.obj_create(t) //Creation Event
+			opt = opt || null;
+			t.inherited = obj.parent?obj.parent.obj_create.bind(t,t,opt):function(){};
+			obj.obj_create(t, opt) //Creation Event
 		},
 		object = function(args){
 			var t = this;
@@ -471,7 +520,7 @@ var GMJS = new (function(){'use strict';
 			object_table.push(t);
 			t.alarm = function(scope, code){
 				var t = this;
-				var time = -1;
+				var time = 0;
 				Object.defineProperty(t, 'time', {set:function(x){time = Math.floor(x);}, get:function(){return time;}});
 				t.code = code;
 				t._run_step = function(){
@@ -493,7 +542,8 @@ var GMJS = new (function(){'use strict';
 			
 			//Pass any of these options to the newly created object
 			t.parent = ('parent' in args)?args.parent:null;
-			t.depth = ('depth' in args)?args.depth:0;
+			t.depth = ('depth' in args)?args.depth:((t.parent)?t.parent.depth:0);
+			t.tiled = ('tiled' in args)?args.tiled:false;
 			t.name = ('name' in args)?args.name:null;
 			t.origin = ('origin' in args)?args.origin:{x:0.5, y:0.5};
 			t.image = ('image' in args)?args.image:null;
@@ -513,8 +563,8 @@ var GMJS = new (function(){'use strict';
 				t.parent.children.push(t); //Add child to parent
 			}
 			
-			t.instance_create = function(x, y){
-				var ii = new instance(t, x, y);
+			t.instance_create = function(x, y, opt){
+				var ii = new instance(t, x, y, opt);
 				t.instances.push(ii);
 				return ii;
 			}
@@ -620,6 +670,8 @@ var GMJS = new (function(){'use strict';
 			This.get_instance = get_instance;
 			This.instance_exists = instance_exists;
 			This.keyboard = keyboard;
+			This.keyboard_any = keyboard_any;
+			This.keyboard_char = keyboard_chr;
 			This.mouse = mouse;
 			This.mouse_click = mouse_click;
 			This.mouse_check = mouse_check;
