@@ -1,6 +1,6 @@
 /* ------------------------------------------ //
 					GM-JS
-			Version: 0.5.1
+			Version: 0.5.2
 			Author: jmscreator
 			License: Free to use (See GPL License)
 			
@@ -88,7 +88,7 @@ var GMJS = new (function(){'use strict';
 			});
 		};
 		
-		console.log(app);
+		//console.log(app);
 		//Create game on screen
 		document.body.appendChild(app.view);
 		
@@ -176,7 +176,8 @@ var GMJS = new (function(){'use strict';
 		var keyboard_char = '';
 		//Keyboard String Input
 		keyboard.on('down', function(e){
-			var chr = '';
+			e.original.preventDefault();
+			var chr = '';if(!e.key) return;
 			if(e.key.length == 1){
 				chr = (keyboard.shift)?e.key:e.key.toLowerCase();
 				if(keyboard.shift){
@@ -275,7 +276,7 @@ var GMJS = new (function(){'use strict';
 			return !!keyboard.pressed[key];
 		},
 		keyboard_any = function(){
-			for(var k in keyboard.codes) if(keyboard[k]) return true;
+			for(var k in keyboard.codes) if(k != 'tab' && keyboard[k]) return true;
 		},
 		keyboard_chr = function(){
 			var r = keyboard_char;keyboard_char = '';return r;
