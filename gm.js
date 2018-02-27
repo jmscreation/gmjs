@@ -1,6 +1,6 @@
 /* ------------------------------------------ //
 					GM-JS
-			Version: 0.5.2
+			Version: 0.5.4
 			Author: jmscreator
 			License: Free to use (See GPL License)
 			
@@ -31,6 +31,8 @@ var GMJS = new (function(){'use strict';
 		resources = PIXI.loader.resources;
 	const dtr = Math.PI / 180;
 	const rtd = 1/dtr;
+	var __IndexPosition = 10000,
+		AllInstances = [];
 	var in_array = function(keys, array){ // Returns if all keys are in an array
 		if(typeof(array) != 'object') return false;
 		if(typeof(keys) == 'string') return keys in array;
@@ -38,6 +40,9 @@ var GMJS = new (function(){'use strict';
 			if(!(keys[x] in array)) return false;
 		}
 		return true;
+	},
+	newId = function(){
+		return __IndexPosition++;
 	}
 	
 	This.StartGameEngine = function(Params){
@@ -176,7 +181,7 @@ var GMJS = new (function(){'use strict';
 		var keyboard_char = '';
 		//Keyboard String Input
 		keyboard.on('down', function(e){
-			e.original.preventDefault();
+			//e.original.preventDefault();
 			var chr = '';if(!e.key) return;
 			if(e.key.length == 1){
 				chr = (keyboard.shift)?e.key:e.key.toLowerCase();
@@ -253,6 +258,7 @@ var GMJS = new (function(){'use strict';
 			return l;
 		},
 		get_instance = function(obj, id){
+			if(+obj === obj){var r;for(var z in AllInstances){if(obj == (r=AllInstances[z]).id) return r;}return null;}
 			var l = get_instances(obj);id = id || 0;
 			return (!!l[id])?l[id]:false;
 		},
@@ -300,7 +306,7 @@ var GMJS = new (function(){'use strict';
 			mb = mb||'left';
 			op = op || mouse_check;
 			if(op(mb)){
-				return (checkCollision({x:mouse.x, y:mouse.y, width:1, height:1}, t.sprite));
+				return (checkCollision({x:This.mouse_x, y:This.mouse_y, width:1, height:1}, t.sprite));
 			}
 		},
 		point_direction = function(x,y,xx,yy){
@@ -385,7 +391,8 @@ var GMJS = new (function(){'use strict';
 			image_alpha = 1,
 			image_single = 0,
 			image_angle = 0,
-			xscale = 1,yscale = 1;
+			xscale = 1,yscale = 1,
+			instanceid = newId();
 			
 			var updateMask = function(){
 				var m = t.mask;
@@ -452,6 +459,8 @@ var GMJS = new (function(){'use strict';
 				if(_destroy){
 					var i = obj.instances.indexOf(t);
 					if(i > -1) obj.instances.splice(i , 1);
+					i = AllInstances.indexOf(t);
+					if(i > -1) AllInstances.splice(i , 1);
 					app.stage.removeChild(t.sprite);
 					app.stage.removeChild(t.graphics);
 					return;
@@ -497,6 +506,7 @@ var GMJS = new (function(){'use strict';
 			Object.defineProperty(t.graphics, 'depth', {get:function(){return t.graphics.zIndex;}, set:function(x){_DepthChanged = _DepthChanged || (t.graphics.zIndex != x);t.graphics.zIndex = x;}});
 			app.stage.addChild(t.graphics);
 			
+			Object.defineProperty(t, 'id', {get:function(){return instanceid;}, set:function(){}});
 			Object.defineProperty(t, 'image_alpha', {get:function(){return image_alpha;}, set:function(x){image_alpha = Math.max(Math.min(x, 1), 0);t.sprite.alpha = image_alpha;}});
 			Object.defineProperty(t, 'image_angle', {get:function(){return image_angle;}, set:function(x){image_angle = x;t.sprite.rotation = (image_angle)*dtr;}});
 			Object.defineProperty(t, 'xscale', {get:function(){return xscale;}, set:function(x){xscale = x;t.sprite.scale.x = x;if(!obj.mask) updateMask();}});
@@ -567,6 +577,7 @@ var GMJS = new (function(){'use strict';
 			t.instance_create = function(x, y, opt){
 				var ii = new instance(t, x, y, opt);
 				t.instances.push(ii);
+				AllInstances.push(ii);
 				return ii;
 			}
 			t.instance_number = function(){
