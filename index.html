@@ -106,7 +106,7 @@ window.onload = function(){'use strict';
 					if(g.keyboard_check_pressed('P')) t.debug = !t.debug;
 					if(g.keyboard.control && g.keyboard_check_pressed('A')){
 						t.edit = !t.edit;
-						g.With(GatherObjects, function(ii){if(ii.object_index != Wall)ii.instance_destroy();});
+						g.With(CollisionObjects, function(ii){if(ii.object_index != Wall)ii.instance_destroy();});
 						g.With(ItemObjects, function(ii){ii.instance_destroy();});
 						t.starttimers(!t.edit);
 						t.draw_kills.visible = !t.edit;
@@ -184,11 +184,16 @@ window.onload = function(){'use strict';
 				},{name:'create_blackhole', code:function(t){var off = 32;if(Math.round(Math.random())){var xx = Math.random()*g.room.width;var yy = (Math.round(Math.random()))?-off:g.room.height + off;} else {xx = (Math.round(Math.random()))?-off:g.room.width + off;yy = Math.random()*g.room.height;};t.create_blackhole.time = 2000 + Math.random()*25000; Blackhole.instance_create(xx, yy);}}
 				]
 			});
+		var InGameObjects = new g.object({
+			name:'game_objects'
+		});
 		var CollisionObjects = new g.object({
-			name:'collision_objects'
+			name:'collision_objects',
+			parent:InGameObjects
 		});
 		var ItemObjects = new g.object({
 			name:'ItemPar',
+			parent:InGameObjects,
 			mask:{x:0, y:0, w:8, h:8},
 			creation:function(t){
 				t.depth = g.room.height - t.y;
@@ -203,6 +208,7 @@ window.onload = function(){'use strict';
 		});
 		var Bullet = new g.object({
 				name:'Bullet',
+				parent:InGameObjects,
 				image:'spr_bullet',
 				mask:{x:0,y:0,w:8,h:8},
 				creation:function(t){
@@ -245,6 +251,7 @@ window.onload = function(){'use strict';
 			});
 		var Blackhole = new g.object({
 				image:'spr_blackhole',
+				parent:InGameObjects,
 				creation:function(t){
 					t.tm = 0;
 					t.image_alpha = 0;
@@ -281,6 +288,7 @@ window.onload = function(){'use strict';
 		var Enemy = new g.object({
 			image:'spr_enemy',
 			name:'Enemy',
+			parent:InGameObjects,
 			creation:function(t){
 				t.health = 100;
 				t.xscale = 0.5;
@@ -362,14 +370,15 @@ window.onload = function(){'use strict';
 		});	
 		var Wall = new g.object({
 			name:'Wall',
-			image:'spr_wall',
 			parent:CollisionObjects,
+			image:'spr_wall',
 			creation:function(t){
 				t.depth = g.room.height - t.y;
 			}
 		});
 		var Character = new g.object({
 			name:'Character',
+			parent:InGameObjects,
 			image:'spr_character',
 			mask:{x:0,y:0,radius:16},
 			creation:function(t){
