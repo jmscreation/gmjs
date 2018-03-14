@@ -12,7 +12,7 @@
 		<script type="text/javascript">
 /*
 	This is a game created for testing GM-JS
-	Version 1.4.6
+	Version 1.4.7
 */
 oncontextmenu = function(){return false;};
 window.onload = function(){'use strict';
@@ -117,7 +117,7 @@ window.onload = function(){'use strict';
 						t.graphics.beginFill(0x777777);
 						t.graphics.drawCircle(xx, yy, 8);
 						if(g.mouse_check('left')){
-							if(xx > 0 && yy > 0 && xx < g.room.width && yy < g.room.height && !g.collision_point(xx, yy, GatherObjects) && !g.collision_point(xx, yy, CollisionObjects)){
+							if(xx > 0 && yy > 0 && xx < g.room.width && yy < g.room.height && !g.collision_point(xx, yy, InGameObjects)){
 								Wall.instance_create(xx, yy);
 							}
 						}
