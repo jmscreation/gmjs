@@ -1,6 +1,6 @@
 /* ------------------------------------------ //
 					GM-JS
-			Version: 0.5.4
+			Version: 0.5.5
 			Author: jmscreator
 			License: Free to use (See GPL License)
 			
@@ -55,7 +55,8 @@ var GMJS = new (function(){'use strict';
 		Images = Params['images'] || [],
 		Sounds = Params['sounds'] || [],
 		BeginStep = Params['beginStep'] || function(){},
-		EndStep = Params['endStep'] || function(){};
+		EndStep = Params['endStep'] || function(){},
+		PreventDefault = Params['preventDefault'] || false;
 		
 		Params['room'] = Params['room'] || {},
 		Params['view'] = Params['view'] || {}
@@ -181,7 +182,7 @@ var GMJS = new (function(){'use strict';
 		var keyboard_char = '';
 		//Keyboard String Input
 		keyboard.on('down', function(e){
-			//e.original.preventDefault();
+			if(PreventDefault) e.original.preventDefault();
 			var chr = '';if(!e.key) return;
 			if(e.key.length == 1){
 				chr = (keyboard.shift)?e.key:e.key.toLowerCase();
