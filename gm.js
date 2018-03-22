@@ -1,6 +1,6 @@
 /* ------------------------------------------ //
 					GM-JS
-			Version: 0.5.6
+			Version: 0.5.7
 			Author: jmscreator
 			License: Free to use (See GPL License)
 			
@@ -27,6 +27,7 @@ var GMJS = new (function(){'use strict';
 		Texture = PIXI.Texture,
 		BaseTexture = PIXI.BaseTexture,
 		Sound = PIXI.sound,
+		ConstructLoader = PIXI.loaders.Loader,
 		loader = PIXI.loader,
 		resources = PIXI.loader.resources;
 	const dtr = Math.PI / 180;
@@ -45,13 +46,16 @@ var GMJS = new (function(){'use strict';
 		return __IndexPosition++;
 	}
 	
+	
 	This.StartGameEngine = function(Params){
 		if(_GameEngineStarted) return console.error('GameEngine Is Running!');
 		_GameEngineStarted = true;
-		
+		var load_progress = [{}, {}];
 		//Setup game initialization parameters
 		var GameStart = Params['onStart']||function(){},
 		GameEnd = Params['onEnd'] || function(){},
+		LoadingImages = Params['loadingImages'] || [],
+		LoadingRoom = Params['loadingRoom'] || {width:640, height:480},
 		Images = Params['images'] || [],
 		Sounds = Params['sounds'] || [],
 		BeginStep = Params['beginStep'] || function(){},
@@ -63,12 +67,17 @@ var GMJS = new (function(){'use strict';
 		Params['view'] = Params['view'] || {}
 		Params['screen'] = Params['screen'] || {};
 
+		//Start Loading Screen
+		var loadingScreen = new Application(LoadingRoom);
+		document.body.appendChild(loadingScreen.view);
+		
 		var View = {},
 		Screen = {};
 		
 		This.room = {},
 		This.screen = {},
 		This.view = {};
+		
 		//Game width\height in game room
 		Object.defineProperty(This.room, 'width', {value:('width' in Params.room)?Params.room.width:600, writeable:false});
 		Object.defineProperty(This.room, 'height', {value:('height' in Params.room)?Params.room.height:400, writeable:false});
@@ -85,6 +94,7 @@ var GMJS = new (function(){'use strict';
 		Object.defineProperty(This.screen, 'width', {get:function(){return Screen.width;}, set:function(v){Screen.width = v;app.renderer.resize(v, Screen.height);app.stage.scale.x = app.renderer.width/This.view.width;}});
 		Object.defineProperty(This.screen, 'height', {get:function(){return Screen.height;}, set:function(v){Screen.height = v;app.renderer.resize(Screen.width, v);app.stage.scale.y = app.renderer.height/This.view.height;}});
 		
+		
 		//Create game application frame
 		var app = new Application(This.room);
 		app.stage.updateLayersOrder = function () {
@@ -94,10 +104,6 @@ var GMJS = new (function(){'use strict';
 				return b.zIndex - a.zIndex
 			});
 		};
-		
-		//console.log(app);
-		//Create game on screen
-		document.body.appendChild(app.view);
 		
 		//Set screen resolution/game port settings
 		This.view.x = ('x' in Params.view)?Params.view.x:0;
@@ -233,7 +239,11 @@ var GMJS = new (function(){'use strict';
 			_text.align = function(a, b){b=b||100;switch(a){case 'center':_text.anchor.x = 0.5;_text.anchor.y = 0.5;return;case 'left':_text.anchor.x = 1-b/100;return;case 'right':_text.anchor.x = b/100;return;case 'top':_text.anchor.y = 1-b/100;case 'bottom':_text.anchor.y = b/100;}};
 			_text.x = x || 0;
 			_text.y = y || 0;
-			app.stage.addChild(_text);
+			if(load_progress[0].progress != 100){
+				loadingScreen.stage.addChild(_text);
+			} else {
+				app.stage.addChild(_text);
+			}
 			_DepthChanged = true;
 			return _text;
 		},
@@ -620,7 +630,63 @@ var GMJS = new (function(){'use strict';
 			
 			app.stage.addChild(t.sprite);
 		};
+
+		//-----Loading Screen
+		var load_obj = [],
+		loadingLoop = function(){
+			for(var i in load_obj){
+				var ii = load_obj[i];
+				if('step' in ii) ii.step(ii, (load_progress));
+			}
+		}, beginLoading = function(){
+			publish();
+			var loaderInstance = function(type, para, step, x, y){
+				var t = this;
+				t.type = type;
+				t.step = step;
+				switch(type){
+				case 0:
+					t.sprite = para?(new Sprite(TextureCache[para])):'';
+					if(!t.sprite) return;
+					Object.defineProperty(t, 'xscale', {set:function(){t.sprite.scale.x = i;}, get:function(){return t.sprite.scale.x;}});
+					Object.defineProperty(t, 'yscale', {set:function(){t.sprite.scale.y = i;}, get:function(){return t.sprite.scale.y;}});
+					break;
+				case 1:
+					t.sprite = create_text(para.text, x, y, new TextStyle(para.style));
+					break;
+				case 2:
+					t.sprite = new Graphics();
+					break;
+				}
+				loadingScreen.stage.addChild(t.sprite);
+				Object.defineProperty(t, 'x', {set:function(i){t.sprite.x = i;}, get:function(){return t.sprite.x;}});
+				Object.defineProperty(t, 'y', {set:function(i){t.sprite.y = i;}, get:function(){return t.sprite.y;}});
+				t.x = x;
+				t.y = y;
+			}
+			for(var i in LoadingImages){
+				var ii = LoadingImages[i];
+				var step, type, tex, x, y;
+				step = ii.step || function(){};
+				type = ii.type || 0;
+				switch(type){
+				case 0:tex = ii.path || '';break;
+				case 1:tex = {text:(ii.text||''), style:(ii.style||{})};break;
+				}
+				x = ii.x || 0;
+				y = ii.y || 0;
+				load_obj.push((new loaderInstance(type, tex, step, x, y)));
+			}
+			loadingScreen.ticker.add(loadingLoop);
+		}, loading = new ConstructLoader();
 		
+		for(var i in LoadingImages){
+			var ii = LoadingImages[i];
+			if(!('path' in ii)) continue;
+			loading.add('__'+i, ii.path);
+		}
+		loading.load(beginLoading);
+		//------
 		
 		function mainLoop(delta){
 			//Update Mouse Coords
@@ -696,12 +762,20 @@ var GMJS = new (function(){'use strict';
 			This.create_text = create_text;
 			This.create_text_style = create_text_style;
 		}
-		loader.load(setup); // Start Setup When Complete
+
+		var progress = function(loader, res){
+			load_progress = [loader, res];
+		}
+		loader.on('progress', progress).load(setup); // Start Setup When Complete
 		function setup() {
-			loadTextures(TexList);
-			publish();
-			GameStart();
-			app.ticker.add(mainLoop);
+			setTimeout(function(){
+				document.body.removeChild(loadingScreen.view);
+				loadingScreen.destroy();
+				//Create game on screen
+				document.body.appendChild(app.view);
+				loadTextures(TexList);
+				GameStart();
+				app.ticker.add(mainLoop);}, 1000);
 			/*var a = function(){
 				var begin, end;
 				begin = performance.now();
