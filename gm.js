@@ -1,6 +1,6 @@
 /* ------------------------------------------ //
 					GM-JS
-			Version: 0.5.7
+			Version: 0.5.9
 			Author: jmscreator
 			License: Free to use (See GPL License)
 			
@@ -46,7 +46,6 @@ var GMJS = new (function(){'use strict';
 		return __IndexPosition++;
 	}
 	
-	
 	This.StartGameEngine = function(Params){
 		if(_GameEngineStarted) return console.error('GameEngine Is Running!');
 		_GameEngineStarted = true;
@@ -56,8 +55,10 @@ var GMJS = new (function(){'use strict';
 		GameEnd = Params['onEnd'] || function(){},
 		LoadingImages = Params['loadingImages'] || [],
 		LoadingRoom = Params['loadingRoom'] || {width:640, height:480},
+		AfterLoadTimeout = Params['loadingTimeout'] || 1000,
 		Images = Params['images'] || [],
 		Sounds = Params['sounds'] || [],
+		Files = Params['files'] || [],
 		BeginStep = Params['beginStep'] || function(){},
 		EndStep = Params['endStep'] || function(){},
 		PreventDefault = Params['preventDefault'] || false,
@@ -149,14 +150,6 @@ var GMJS = new (function(){'use strict';
 			}
 		}
 		
-		//Import Sounds
-		for(var snd in Sounds){
-			var i = Sounds[snd];
-			if(!('path' in i)) {console.error('Failed loading sound resource - ', i);continue;}
-			if(!('name' in i)) {console.error('Failed to load a sound resource with no name - ');continue;}
-			loader.add(i.name, i.path);
-		}
-		
 		//Import textures
 		var TexList = [];
 		for(var img in Images){
@@ -176,6 +169,22 @@ var GMJS = new (function(){'use strict';
 			loader.add(i.path);
 			TexList.push(i);
 		}
+		//Import Files
+		for(var file in Files){
+			var i = Files[file];
+			if(!('path' in i)) {console.error('Failed loading file resource - ', i);continue;}
+			if(!('name' in i)) {console.error('Failed to load a file resource with no name - ');continue;}
+			loader.add(i.name, i.path); //Preload
+		}
+		//Import Sounds
+		for(var snd in Sounds){
+			var i = Sounds[snd];
+			if(!('path' in i)) {console.error('Failed loading sound resource - ', i);continue;}
+			if(!('name' in i)) {console.error('Failed to load a sound resource with no name - ');continue;}
+			//Sound.add(i.name, i.path); //Define
+			loader.add(i.name, i.path); //Preload
+		}
+		
 		
 		//Setup important class objects/variables
 		var _DepthChanged = false,
@@ -276,7 +285,8 @@ var GMJS = new (function(){'use strict';
 		},
 		sound_play = function(snd, opt){
 			opt = opt || {};
-			return resources[snd].sound.play(opt);
+			//return Sound.play(snd, opt); //Not loaded
+			return resources[snd].sound.play(opt); //Pre-loaded
 		},
 		sound_volume = function(snd, vol){
 			return resources[snd].sound.volume = vol;
@@ -629,63 +639,112 @@ var GMJS = new (function(){'use strict';
 			t.origin.y = ('origin' in args)?args.origin.y || 0:0;
 			
 			app.stage.addChild(t.sprite);
+		},
+		resource_add = function(args, opt){
+			var list = [], opt = opt || {};
+			for(var j = 0; j<args.length;j++){
+				var i = args[j];
+				if(!('type' in i)) {console.error('Failed loading resource with no type - ', i);return;}
+				switch(i.type){
+				case 0:
+					if(!('path' in i)) {console.error('Failed loading sound resource - ', i);return;}
+					if(!('name' in i)) {console.error('Failed to load a sound resource with no name - ');return;}
+					loader.add(i.name, i.path);
+					break;
+				case 1:
+					if(!('path' in i)) {console.error('Failed loading resource - ', i);return;}
+					if('strip' in i){
+						for(var l in i.strip){
+							var p = i.strip[l];
+							if(!('name' in p)) {console.error('Failed loading strip resource with no name - '+i.path);return;}
+							p.path = i.path;
+							list.push(p);
+						}
+						if(!i.strip.length) {console.error('Failed loading resource strip with no contents');return;}
+						loader.add(i.path);
+						break;
+					} else if(!('name' in i)) {console.error('Failed loading resource with no name');return;}
+					loader.add(i.path);
+					list.push(i);
+					break;
+				case 2:
+					if(!('path' in i)) {console.error('Failed loading file resource - ', i);return;}
+					if(!('name' in i)) {console.error('Failed to load a file resource with no name - ');return;}
+					loader.add(i.name, i.path);
+					break;
+				}
+			}
+			loader.on('error', function(){
+				console.error('Failed loading a resource via resource_add()');
+			});
+			loader.load(function(){
+				console.log('Loaded new resources');
+				if(list.length) loadTextures(list);
+				if('onComplete' in opt) opt.onComplete();
+			});
+		},
+		resource_get = function(name){
+			return resources[name];
 		};
 
 		//-----Loading Screen
-		var load_obj = [],
-		loadingLoop = function(){
-			for(var i in load_obj){
-				var ii = load_obj[i];
-				if('step' in ii) ii.step(ii, (load_progress));
-			}
-		}, beginLoading = function(){
-			publish();
-			var loaderInstance = function(type, para, step, x, y){
-				var t = this;
-				t.type = type;
-				t.step = step;
-				switch(type){
-				case 0:
-					t.sprite = para?(new Sprite(TextureCache[para])):'';
-					if(!t.sprite) return;
-					Object.defineProperty(t, 'xscale', {set:function(){t.sprite.scale.x = i;}, get:function(){return t.sprite.scale.x;}});
-					Object.defineProperty(t, 'yscale', {set:function(){t.sprite.scale.y = i;}, get:function(){return t.sprite.scale.y;}});
-					break;
-				case 1:
-					t.sprite = create_text(para.text, x, y, new TextStyle(para.style));
-					break;
-				case 2:
-					t.sprite = new Graphics();
-					break;
+		(function(){
+			var load_obj = [],
+			loadingLoop = function(){
+				for(var i in load_obj){
+					var ii = load_obj[i];
+					if('step' in ii) ii.step(ii, (load_progress));
 				}
-				loadingScreen.stage.addChild(t.sprite);
-				Object.defineProperty(t, 'x', {set:function(i){t.sprite.x = i;}, get:function(){return t.sprite.x;}});
-				Object.defineProperty(t, 'y', {set:function(i){t.sprite.y = i;}, get:function(){return t.sprite.y;}});
-				t.x = x;
-				t.y = y;
-			}
+			}, beginLoading = function(){
+				publish();
+				loading.destroy();
+				var loaderInstance = function(type, para, step, x, y){
+					var t = this;
+					t.type = type;
+					t.step = step;
+					switch(type){
+					case 0:
+						t.sprite = para?(new Sprite(TextureCache[para])):'';
+						if(!t.sprite) return;
+						Object.defineProperty(t, 'xscale', {set:function(){t.sprite.scale.x = i;}, get:function(){return t.sprite.scale.x;}});
+						Object.defineProperty(t, 'yscale', {set:function(){t.sprite.scale.y = i;}, get:function(){return t.sprite.scale.y;}});
+						break;
+					case 1:
+						t.sprite = create_text(para.text, x, y, new TextStyle(para.style));
+						break;
+					case 2:
+						t.sprite = new Graphics();
+						break;
+					}
+					loadingScreen.stage.addChild(t.sprite);
+					Object.defineProperty(t, 'x', {set:function(i){t.sprite.x = i;}, get:function(){return t.sprite.x;}});
+					Object.defineProperty(t, 'y', {set:function(i){t.sprite.y = i;}, get:function(){return t.sprite.y;}});
+					t.x = x;
+					t.y = y;
+				}
+				for(var i in LoadingImages){
+					var ii = LoadingImages[i];
+					var step, type, tex, x, y;
+					step = ii.step || function(){};
+					type = ii.type || 0;
+					switch(type){
+					case 0:tex = ii.path || '';break;
+					case 1:tex = {text:(ii.text||''), style:(ii.style||{})};break;
+					}
+					x = ii.x || 0;
+					y = ii.y || 0;
+					load_obj.push((new loaderInstance(type, tex, step, x, y)));
+				}
+				loadingScreen.ticker.add(loadingLoop);
+			}, loading = new ConstructLoader();
+			
 			for(var i in LoadingImages){
 				var ii = LoadingImages[i];
-				var step, type, tex, x, y;
-				step = ii.step || function(){};
-				type = ii.type || 0;
-				switch(type){
-				case 0:tex = ii.path || '';break;
-				case 1:tex = {text:(ii.text||''), style:(ii.style||{})};break;
-				}
-				x = ii.x || 0;
-				y = ii.y || 0;
-				load_obj.push((new loaderInstance(type, tex, step, x, y)));
+				if(!('path' in ii)) continue;
+				loading.add('__'+i, ii.path);
 			}
-			loadingScreen.ticker.add(loadingLoop);
-		}, loading = new ConstructLoader();
-		
-		for(var i in LoadingImages){
-			var ii = LoadingImages[i];
-			if(!('path' in ii)) continue;
-			loading.add('__'+i, ii.path);
-		}
-		loading.load(beginLoading);
+			loading.load(beginLoading);
+		})();
 		//------
 		
 		function mainLoop(delta){
@@ -731,6 +790,10 @@ var GMJS = new (function(){'use strict';
 		}
 
 		function publish(){
+			This.RES_SOUND = 0;
+			This.RES_IMAGE = 1;
+			This.RES_FILE = 2;
+		
 			This.mouse_x = 0;
 			This.mouse_y = 0;
 			This.object = object;
@@ -761,6 +824,8 @@ var GMJS = new (function(){'use strict';
 			This.keyboard_check_released = keyboard_check_released;
 			This.create_text = create_text;
 			This.create_text_style = create_text_style;
+			This.resource_add = resource_add;
+			This.resource_get = resource_get;
 		}
 
 		var progress = function(loader, res){
@@ -768,14 +833,15 @@ var GMJS = new (function(){'use strict';
 		}
 		loader.on('progress', progress).load(setup); // Start Setup When Complete
 		function setup() {
+			loadTextures(TexList);
 			setTimeout(function(){
 				document.body.removeChild(loadingScreen.view);
 				loadingScreen.destroy();
 				//Create game on screen
 				document.body.appendChild(app.view);
-				loadTextures(TexList);
 				GameStart();
-				app.ticker.add(mainLoop);}, 1000);
+				app.ticker.add(mainLoop);
+				}, AfterLoadTimeout);
 			/*var a = function(){
 				var begin, end;
 				begin = performance.now();
