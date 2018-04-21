@@ -1,6 +1,6 @@
 /* ------------------------------------------ //
 					GM-JS
-			Version: 0.5.9
+			Version: 0.6.0
 			Author: jmscreator
 			License: Free to use (See GPL License)
 			
@@ -286,6 +286,7 @@ var GMJS = new (function(){'use strict';
 		sound_play = function(snd, opt){
 			opt = opt || {};
 			//return Sound.play(snd, opt); //Not loaded
+			if(!resources[snd].sound) return {};
 			return resources[snd].sound.play(opt); //Pre-loaded
 		},
 		sound_volume = function(snd, vol){
