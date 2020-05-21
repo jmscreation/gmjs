@@ -1,6 +1,6 @@
 /* ------------------------------------------ //
 					GM-JS
-			Version: 0.6.0
+			Version: 0.6.1
 			Author: jmscreator
 			License: Free to use (See GPL License)
 			
@@ -640,6 +640,10 @@ var GMJS = new (function(){'use strict';
 			t.origin.y = ('origin' in args)?args.origin.y || 0:0;
 			
 			app.stage.addChild(t.sprite);
+			
+			t.destroy = function(){
+				app.stage.removeChild(t.sprite);
+			}
 		},
 		resource_add = function(args, opt){
 			var list = [], opt = opt || {};
