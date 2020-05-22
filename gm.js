@@ -246,6 +246,7 @@ var GMJS = new (function(){'use strict';
 			_text.zIndex = 0;
 			Object.defineProperty(_text, 'depth', {set:function(x){_DepthChanged = _DepthChanged || (_text.zIndex != x);_text.zIndex = x;}, get:function(){return _text.zIndex;}});
 			_text.align = function(a, b){b=b||100;switch(a){case 'center':_text.anchor.x = 0.5;_text.anchor.y = 0.5;return;case 'left':_text.anchor.x = 1-b/100;return;case 'right':_text.anchor.x = b/100;return;case 'top':_text.anchor.y = 1-b/100;case 'bottom':_text.anchor.y = b/100;}};
+			_text.destroy = function(){app.stage.removeChild(_text);}
 			_text.x = x || 0;
 			_text.y = y || 0;
 			if(load_progress[0].progress != 100){
