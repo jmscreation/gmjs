@@ -37,6 +37,8 @@ window.onload = function(){'use strict';
 	{name:'snd_treasure', path:'sounds/treasure.mp3'},
 	{name:'snd_shield', path:'sounds/shield.mp3'},
 	{name:'snd_health', path:'sounds/health.mp3'}];
+	//Setup Fonts
+	var Fonts = [{name:'customFont', path:'images/font.ttf'}];
 	
 	//Sets the game room to window size
 	//Math.round(window.innerWidth/32)*32
@@ -47,6 +49,7 @@ window.onload = function(){'use strict';
 			onStart:GameInit,
 			images:Sprites,
 			sounds:Sounds,
+			fonts:Fonts,
 			room:{width:480, height:608},
 			view:{width:400, height:450}
 		});
@@ -75,7 +78,7 @@ window.onload = function(){'use strict';
 		g.sound_volume('snd_treasure', 0.6);
 		
 		//Setup Fonts
-		var PlayerFont = g.create_text_style({fontFamily: 'Arial', fontSize: 10, fill:0xFFFFFF});
+		var PlayerFont = g.create_text_style({fontFamily: 'customFont', fontSize: 10, fill:0xFFFFFF});
 		//Setup Objects
 		var Background = new g.background({
 			image:'bck_background',

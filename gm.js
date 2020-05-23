@@ -1,6 +1,6 @@
 /* ------------------------------------------ //
 					GM-JS
-			Version: 0.6.1
+			Version: 0.6.2
 			Author: jmscreator
 			License: Free to use (See GPL License)
 			
@@ -59,6 +59,7 @@ var GMJS = new (function(){'use strict';
 		Images = Params['images'] || [],
 		Sounds = Params['sounds'] || [],
 		Files = Params['files'] || [],
+		Fonts = Params['fonts'] || [],
 		BeginStep = Params['beginStep'] || function(){},
 		EndStep = Params['endStep'] || function(){},
 		PreventDefault = Params['preventDefault'] || false,
@@ -170,19 +171,29 @@ var GMJS = new (function(){'use strict';
 			TexList.push(i);
 		}
 		//Import Files
-		for(var file in Files){
-			var i = Files[file];
-			if(!('path' in i)) {console.error('Failed loading file resource - ', i);continue;}
-			if(!('name' in i)) {console.error('Failed to load a file resource with no name - ');continue;}
-			loader.add(i.name, i.path); //Preload
+		for(let file of Files){
+			if(!('path' in file)) {console.error('Failed loading file resource - ', file);continue;}
+			if(!('name' in file)) {console.error('Failed to load a file resource with no name - ');continue;}
+			loader.add(file.name, file.path); //Preload
+		}
+		//Import Fonts
+		var fontsLoaded = 0;
+		for(let font of Fonts){
+			if(!('path' in font)) {console.error('Failed loading file resource - ', font);continue;}
+			if(!('name' in font)) {console.error('Failed to load a file resource with no name - ');continue;}
+			//font = {name:'', path:''};
+			var obj = new FontFace(font.name, "url('"+font.path+"')", {});
+			obj.load().then(fnt=>{
+				document.fonts.add(fnt);
+				fontsLoaded++;
+			});
+			//loader.add(i.name, i.path); //Preload
 		}
 		//Import Sounds
-		for(var snd in Sounds){
-			var i = Sounds[snd];
-			if(!('path' in i)) {console.error('Failed loading sound resource - ', i);continue;}
-			if(!('name' in i)) {console.error('Failed to load a sound resource with no name - ');continue;}
-			//Sound.add(i.name, i.path); //Define
-			loader.add(i.name, i.path); //Preload
+		for(let snd of Sounds){
+			if(!('path' in snd)) {console.error('Failed loading sound resource - ', snd);continue;}
+			if(!('name' in snd)) {console.error('Failed to load a sound resource with no name - ');continue;}
+			loader.add(snd.name, snd.path); //Preload
 		}
 		
 		
@@ -840,14 +851,23 @@ var GMJS = new (function(){'use strict';
 		loader.on('progress', progress).load(setup); // Start Setup When Complete
 		function setup() {
 			loadTextures(TexList);
-			setTimeout(function(){
-				document.body.removeChild(loadingScreen.view);
-				loadingScreen.destroy();
+			
+			function launchGame(){
+				document.body.removeChild(loadingScreen.view); // 
+				loadingScreen.destroy(); // destroy loading screen object
 				//Create game on screen
 				document.body.appendChild(app.view);
 				GameStart();
 				app.ticker.add(mainLoop);
-				}, AfterLoadTimeout);
+			}
+			
+			var finalCheck = setInterval(()=>{
+				
+				if(fontsLoaded != Fonts.length) return; // wait for fonts to load
+				
+				clearInterval(finalCheck);
+				setTimeout(launchGame, AfterLoadTimeout);
+			}, 1000);
 			/*var a = function(){
 				var begin, end;
 				begin = performance.now();
