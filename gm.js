@@ -1,6 +1,6 @@
 /* ------------------------------------------ //
 					GM-JS
-			Version: 0.6.2
+			Version: 0.6.3
 			Author: jmscreator
 			License: Free to use (See GPL License)
 			
@@ -202,10 +202,12 @@ var GMJS = new (function(){'use strict';
 		room = app.screen,
 		keyboard = new nimble.Keyboard(),
 		mouse = new nimble.Mouse(app.view),
+		touch = new nimble.Touch(app.view),
 		object_table = [];
 		
 		keyboard.steps = true;
 		mouse.steps = true;
+		touch.steps = true;
 		var keyboard_char = '';
 		//Keyboard String Input
 		keyboard.on('down', function(e){
@@ -327,15 +329,15 @@ var GMJS = new (function(){'use strict';
 		},
 		mouse_check = function(mb){
 			if(mb != 'left' && mb != 'right' && mb != 'middle') return false;
-			return mouse[mb];
+			return mouse[mb] || (mb == 'left' ? !!touch.fingers[0] : false);
 		},
 		mouse_check_pressed = function(mb){
 			mb = mb||'left';
-			return !!mouse.pressed[mb];
+			return !!mouse.pressed[mb] || !!touch.pressed[0];
 		},
 		mouse_check_released = function(mb){
 			mb = mb||'left';
-			return !!mouse.released[mb];
+			return !!mouse.released[mb] || !!touch.released[0];
 		},
 		mouse_click = function(t, op, mb){
 			mb = mb||'left';
@@ -766,8 +768,15 @@ var GMJS = new (function(){'use strict';
 		
 		function mainLoop(delta){
 			//Update Mouse Coords
-			This.mouse_x = (mouse.x + This.view.x)*app.stage.scale.x;
-			This.mouse_y = (mouse.y + This.view.y)*app.stage.scale.y;
+			if(mouse.x < 0 || mouse.y < 0){
+				if(!!touch.fingers[0]){
+					This.mouse_x = (touch.fingers[0].x + This.view.x)*app.stage.scale.x;
+					This.mouse_y = (touch.fingers[0].y + This.view.y)*app.stage.scale.y;
+				}
+			} else {
+				This.mouse_x = (mouse.x + This.view.x)*app.stage.scale.x;
+				This.mouse_y = (mouse.y + This.view.y)*app.stage.scale.y;
+			}
 			
 			//Global Step
 			BeginStep();
@@ -803,6 +812,7 @@ var GMJS = new (function(){'use strict';
 			//Update Keyboard/Mouse
 			keyboard.stepclear();
 			mouse.stepclear();
+			touch.stepclear();
 			
 		}
 
