@@ -1,6 +1,6 @@
 /* ------------------------------------------ //
 					GM-JS
-			Version: 0.6.3
+			Version: 0.6.4
 			Author: jmscreator
 			License: Free to use (See GPL License)
 			
@@ -20,16 +20,16 @@ var GMJS = new (function(){'use strict';
 		Text = PIXI.Text,
 		TextStyle = PIXI.TextStyle,
 		Sprite = PIXI.Sprite,
-		AnimSprite = PIXI.extras.AnimatedSprite,
-		TilingSprite = PIXI.extras.TilingSprite,
+		AnimSprite = PIXI.AnimatedSprite,
+		TilingSprite = PIXI.TilingSprite,
 		Rectangle = PIXI.Rectangle,
 		TextureCache = PIXI.utils.TextureCache,
 		Texture = PIXI.Texture,
 		BaseTexture = PIXI.BaseTexture,
 		Sound = PIXI.sound,
-		ConstructLoader = PIXI.loaders.Loader,
-		loader = PIXI.loader,
-		resources = PIXI.loader.resources;
+		ConstructLoader = PIXI.Loader,
+		loader = PIXI.Loader.shared,
+		resources = PIXI.Loader.shared.resources;
 	const dtr = Math.PI / 180;
 	const rtd = 1/dtr;
 	var __IndexPosition = 10000,
@@ -124,7 +124,7 @@ var GMJS = new (function(){'use strict';
 			for(var img in list){
 				var i = list[img];
 				if(TextureCache[i.path] == undefined) {console.error('Failed loading resource - '+i.name+' - Image file not found');continue;}
-				var tex = new Texture(BaseTexture.fromImage(i.path)); // Generate New Texture
+				var tex = new Texture(BaseTexture.from(i.path)); // Generate New Texture
 				if('tile' in i){
 					if(!createFrame(tex, i.tile)) console.error('Failed creating frame for - '+i.name);
 				}
@@ -139,7 +139,7 @@ var GMJS = new (function(){'use strict';
 					xsep = j.xsep || 0,ysep = j.ysep || 0;
 					
 					for(var t = 0; t < count; t++){
-						var tx = new Texture(BaseTexture.fromImage(i.path)); // Animation Textures
+						var tx = new Texture(BaseTexture.from(i.path)); // Animation Textures
 						tex.push(tx);
 						var xx = (t % columns),
 						yy = Math.floor(t / columns),
