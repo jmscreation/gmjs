@@ -1,6 +1,6 @@
 /* ------------------------------------------ //
 					GM-JS
-			Version: 0.6.7
+			Version: 0.6.8
 			Author: jmscreator
 			License: Free to use (See GPL License)
 			
@@ -117,6 +117,8 @@ var GMJS = new (function(){'use strict';
 		
 		//Import textures
 		var TexList = [];
+		
+		var isLoading = false; // if game is currently loading extra resources
 		
 		function loadTextures(list){ // load textures into the engine environment
 			function createFrame(tx, tile){
@@ -506,15 +508,29 @@ var GMJS = new (function(){'use strict';
 				obj.obj_end_step(t);//End Step Event
 			};
 			
-			var texture;
-			for(var tx in TexList){
-				if(TexList[tx].name == obj.image){
-					texture = TexList[tx].texture;
-					if(!texture.length) texture = [texture];
-					break;
-				}
+			var tx = TexList.filter((ii)=>{
+					return ii.name == obj.image;
+				})[0],
+				txp = tx;
+			
+			if(tx.duplicate){
+				tx = TexList.filter((ii)=>{
+						return (ii.path == txp.path && !ii.duplicate);
+					})[0];
 			}
-			if(obj.image != null){
+			var texture = null;
+			
+			if(tx != undefined){
+				texture = tx.texture;
+				if(!texture.length) texture = [texture];
+			}
+				
+			if(!texture) {
+				console.warn('instance created with non-existent texture:', obj.image);
+				texture = null;
+			}
+					
+			if(obj.image != null && texture != null){
 				if(!obj.tiled)
 					t.sprite = new AnimSprite(texture);
 				else
@@ -597,10 +613,10 @@ var GMJS = new (function(){'use strict';
 			//Pass any of these options to the newly created object
 			t.parent = ('parent' in args)?args.parent:null;
 			t.depth = ('depth' in args)?args.depth:((t.parent)?t.parent.depth:0);
-			t.tiled = ('tiled' in args)?args.tiled:false;
+			t.tiled = ('tiled' in args)?args.tiled:(t.parent)?t.parent.tiled:false;
 			t.name = ('name' in args)?args.name:null;
-			t.origin = ('origin' in args)?args.origin:{x:0.5, y:0.5};
-			t.image = ('image' in args)?args.image:null;
+			t.origin = ('origin' in args)?args.origin:(t.parent)?t.parent.origin:{x:0.5, y:0.5};
+			t.image = ('image' in args)?args.image:(t.parent)?t.parent.image:null;
 			t.obj_create = ('creation' in args)?args.creation:((t.parent)?t.parent.obj_create:function(){});
 			t.obj_step = ('step' in args)?args.step:((t.parent)?t.parent.obj_step:function(){});
 			t.obj_end_step = ('end_step' in args)?args.end_step:((t.parent)?t.parent.obj_end_step:function(){});
@@ -668,13 +684,27 @@ var GMJS = new (function(){'use strict';
 		resource_add = function(args, onComplete = ()=>{}){
 			var list = [];
 			if(!args.length) throw new Error("resource_add() Must be given an array of resources! Example: [ {name:'', path:'', type:<RES_TYPE>}, ... ]");
+			if(isLoading) return false;
+			isLoading = true;
 			for(var j = 0; j<args.length;j++){
 				var i = args[j];
 				if(!('type' in i)) throw new Error('Failed loading resource with no type - ' + i);
+				if(!('path' in i)) throw new Error('Failed loading resource - ' + i + ' with no path');
+				if(!('name' in i)) throw new Error('Failed to load a resource - must give a name!');
+				
+				if(i.name in TexList) {
+					console.error('Resource name duplicate found: ' + i.name);
+					continue;
+				}
+				
+				if(i.path in loader.resources) {
+					console.error('Resource already exists: ' + i.name);
+					if(i.type == 1){ i.duplicate = true; TexList.push(i); }// don't need to reload the texture
+					continue;
+				}
+				
 				switch(i.type){
 				case 0: // RES_SOUND
-					if(!('path' in i)) throw new Error('Failed loading sound resource - ' + i);
-					if(!('name' in i)) throw new Error('Failed to load a sound resource with no name - ');
 					loader.add(i.name, i.path);
 					break;
 				case 1: // RES_IMAGE
@@ -694,13 +724,9 @@ var GMJS = new (function(){'use strict';
 					list.push(i);
 					break;
 				case 2: // RES_FILE
-					if(!('path' in i)) throw new Error('Failed loading file resource - ' + i);
-					if(!('name' in i)) throw new Error('Failed to load a file resource with no name - ');
 					loader.add(i.name, i.path);
 					break;
 				case 3: // RES_FONT
-					if(!('path' in font)) {console.error('Failed loading font resource - ', font);continue;}
-					if(!('name' in font)) {console.error('Failed to load a font resource with no name - ');continue;}
 					//font = {name:'', path:''};
 					var obj = new FontFace(font.name, "url('"+font.path+"')", {});
 					obj.load().then(fnt=>{
@@ -712,6 +738,7 @@ var GMJS = new (function(){'use strict';
 				}
 			}
 			loader.on('error', function(){
+				reject();
 				throw new Error('Failed loading a resource via resource_add()');
 			});
 			loader.load(function(){
@@ -721,7 +748,9 @@ var GMJS = new (function(){'use strict';
 					TexList.push(...list);
 				}
 				onComplete();
+				isLoading = false;
 			});
+			return true;
 		},
 		resource_get = function(name){
 			return resources[name];
