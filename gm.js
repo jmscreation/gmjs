@@ -1,6 +1,6 @@
 /* ------------------------------------------ //
 					GM-JS
-			Version: 0.6.4
+			Version: 0.6.7
 			Author: jmscreator
 			License: Free to use (See GPL License)
 			
@@ -9,8 +9,8 @@
 
 var GMJS = new (function(){'use strict';
 	var _error = 0;
-	if(typeof(nimble) == 'undefined') {_error++;console.error('GMJS Requires Nimble');}
-	if(typeof(PIXI) == 'undefined') {_error++;console.error('GMJS Requires PIXI');}
+	if(typeof(nimble) == 'undefined') {_error++;throw new Error('GMJS Requires Nimble');}
+	if(typeof(PIXI) == 'undefined') {_error++;throw new Error('GMJS Requires PIXI');}
 	if(_error) throw ('GMJS Failed To Load Because '+_error.toString()+' Error'+'s'.repeat((_error>1))+' Occurred');
 	var This = this;
 	var _GameEngineStarted = false;
@@ -47,7 +47,7 @@ var GMJS = new (function(){'use strict';
 	}
 	
 	This.StartGameEngine = function(Params){
-		if(_GameEngineStarted) return console.error('GameEngine Is Running!');
+		if(_GameEngineStarted) return throw new Error('GameEngine Is Already Running!');
 		_GameEngineStarted = true;
 		var load_progress = [{}, {}];
 		//Setup game initialization parameters
@@ -115,8 +115,10 @@ var GMJS = new (function(){'use strict';
 		This.screen.width = ('width' in Params.screen)?Params.screen.width:This.view.width;
 		This.screen.height = ('height' in Params.screen)?Params.screen.height:This.view.height;
 		
+		//Import textures
+		var TexList = [];
 		
-		function loadTextures(list){
+		function loadTextures(list){ // load textures into the engine environment
 			function createFrame(tx, tile){
 				if(!in_array(['x', 'y', 'w', 'h'], tile)) return false;
 				tx.frame = (new Rectangle(tile.x, tile.y, tile.w, tile.h));return true;
@@ -126,7 +128,7 @@ var GMJS = new (function(){'use strict';
 				if(TextureCache[i.path] == undefined) {console.error('Failed loading resource - '+i.name+' - Image file not found');continue;}
 				var tex = new Texture(BaseTexture.from(i.path)); // Generate New Texture
 				if('tile' in i){
-					if(!createFrame(tex, i.tile)) console.error('Failed creating frame for - '+i.name);
+					if(!createFrame(tex, i.tile)) {console.error('Failed creating frame for - '+i.name); continue;}
 				}
 				
 				if('animated' in i){
@@ -151,8 +153,6 @@ var GMJS = new (function(){'use strict';
 			}
 		}
 		
-		//Import textures
-		var TexList = [];
 		for(var img in Images){
 			var i = Images[img];
 			if(!('path' in i)) {console.error('Failed loading resource - ', i);continue;}
@@ -179,8 +179,8 @@ var GMJS = new (function(){'use strict';
 		//Import Fonts
 		var fontsLoaded = 0;
 		for(let font of Fonts){
-			if(!('path' in font)) {console.error('Failed loading file resource - ', font);continue;}
-			if(!('name' in font)) {console.error('Failed to load a file resource with no name - ');continue;}
+			if(!('path' in font)) {console.error('Failed loading font resource - ', font);continue;}
+			if(!('name' in font)) {console.error('Failed to load a font resource with no name - ');continue;}
 			//font = {name:'', path:''};
 			var obj = new FontFace(font.name, "url('"+font.path+"')", {});
 			obj.load().then(fnt=>{
@@ -665,47 +665,62 @@ var GMJS = new (function(){'use strict';
 				app.stage.removeChild(t.sprite);
 			}
 		},
-		resource_add = function(args, opt){
-			var list = [], opt = opt || {};
+		resource_add = function(args, onComplete = ()=>{}){
+			var list = [];
+			if(!args.length) throw new Error('');
 			for(var j = 0; j<args.length;j++){
 				var i = args[j];
-				if(!('type' in i)) {console.error('Failed loading resource with no type - ', i);return;}
+				if(!('type' in i)) throw new Error('Failed loading resource with no type - ' + i);
 				switch(i.type){
-				case 0:
-					if(!('path' in i)) {console.error('Failed loading sound resource - ', i);return;}
-					if(!('name' in i)) {console.error('Failed to load a sound resource with no name - ');return;}
+				case 0: // RES_SOUND
+					if(!('path' in i)) throw new Error('Failed loading sound resource - ' + i);
+					if(!('name' in i)) throw new Error('Failed to load a sound resource with no name - ');
 					loader.add(i.name, i.path);
 					break;
-				case 1:
-					if(!('path' in i)) {console.error('Failed loading resource - ', i);return;}
+				case 1: // RES_IMAGE
+					if(!('path' in i)) throw new Error('Failed loading resource - ' + i);
 					if('strip' in i){
 						for(var l in i.strip){
 							var p = i.strip[l];
-							if(!('name' in p)) {console.error('Failed loading strip resource with no name - '+i.path);return;}
+							if(!('name' in p)) throw new Error('Failed loading strip resource with no name - '+i.path);
 							p.path = i.path;
 							list.push(p);
 						}
-						if(!i.strip.length) {console.error('Failed loading resource strip with no contents');return;}
+						if(!i.strip.length) throw new Error('Failed loading resource strip with no contents');
 						loader.add(i.path);
 						break;
-					} else if(!('name' in i)) {console.error('Failed loading resource with no name');return;}
+					} else if(!('name' in i)) throw new Error('Failed loading resource with no name');
 					loader.add(i.path);
 					list.push(i);
 					break;
-				case 2:
-					if(!('path' in i)) {console.error('Failed loading file resource - ', i);return;}
-					if(!('name' in i)) {console.error('Failed to load a file resource with no name - ');return;}
+				case 2: // RES_FILE
+					if(!('path' in i)) throw new Error('Failed loading file resource - ' + i);
+					if(!('name' in i)) throw new Error('Failed to load a file resource with no name - ');
 					loader.add(i.name, i.path);
 					break;
+				case 3: // RES_FONT
+					if(!('path' in font)) {console.error('Failed loading font resource - ', font);continue;}
+					if(!('name' in font)) {console.error('Failed to load a font resource with no name - ');continue;}
+					//font = {name:'', path:''};
+					var obj = new FontFace(font.name, "url('"+font.path+"')", {});
+					obj.load().then(fnt=>{
+						document.fonts.add(fnt);
+						fontsLoaded++;
+					});
+					break;
+					
 				}
 			}
 			loader.on('error', function(){
-				console.error('Failed loading a resource via resource_add()');
+				throw new Error('Failed loading a resource via resource_add()');
 			});
 			loader.load(function(){
 				console.log('Loaded new resources');
-				if(list.length) loadTextures(list);
-				if('onComplete' in opt) opt.onComplete();
+				if(list.length){
+					loadTextures(list);
+					TexList.push(...list);
+				}
+				onComplete();
 			});
 		},
 		resource_get = function(name){
