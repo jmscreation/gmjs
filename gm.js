@@ -47,7 +47,7 @@ var GMJS = new (function(){'use strict';
 	}
 	
 	This.StartGameEngine = function(Params){
-		if(_GameEngineStarted) return throw new Error('GameEngine Is Already Running!');
+		if(_GameEngineStarted) throw new Error('GameEngine Is Already Running!');
 		_GameEngineStarted = true;
 		var load_progress = [{}, {}];
 		//Setup game initialization parameters
@@ -667,7 +667,7 @@ var GMJS = new (function(){'use strict';
 		},
 		resource_add = function(args, onComplete = ()=>{}){
 			var list = [];
-			if(!args.length) throw new Error('');
+			if(!args.length) throw new Error("resource_add() Must be given an array of resources! Example: [ {name:'', path:'', type:<RES_TYPE>}, ... ]");
 			for(var j = 0; j<args.length;j++){
 				var i = args[j];
 				if(!('type' in i)) throw new Error('Failed loading resource with no type - ' + i);
