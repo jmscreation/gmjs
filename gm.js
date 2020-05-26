@@ -1,6 +1,6 @@
 /* ------------------------------------------ //
 					GM-JS
-			Version: 0.6.8
+			Version: 0.6.9
 			Author: jmscreator
 			License: Free to use (See GPL License)
 			
@@ -169,7 +169,7 @@ var GMJS = new (function(){'use strict';
 				loader.add(i.path);
 				continue;
 			} else if(!('name' in i)) {console.error('Failed loading resource with no name');continue;}
-			loader.add(i.path);
+			loader.add(i.name, i.path);
 			TexList.push(i);
 		}
 		//Import Files
@@ -720,7 +720,7 @@ var GMJS = new (function(){'use strict';
 						loader.add(i.path);
 						break;
 					} else if(!('name' in i)) throw new Error('Failed loading resource with no name');
-					loader.add(i.path);
+					loader.add(i.name, i.path);
 					list.push(i);
 					break;
 				case 2: // RES_FILE
@@ -904,6 +904,7 @@ var GMJS = new (function(){'use strict';
 			This.create_text_style = create_text_style;
 			This.resource_add = resource_add;
 			This.resource_get = resource_get;
+			This.resource_list = ()=>resources;
 			This.setFPS = (fps)=>{app.ticker.maxFPS = fps;};
 		}
 
