@@ -1,6 +1,6 @@
 /* ------------------------------------------ //
 					GM-JS
-			Version: 0.6.9
+			Version: 0.6.10
 			Author: jmscreator
 			License: Free to use (See GPL License)
 			
@@ -260,6 +260,7 @@ var GMJS = new (function(){'use strict';
 			var _text = new Text(str, style);
 			_text.zIndex = 0;
 			Object.defineProperty(_text, 'depth', {set:function(x){_DepthChanged = _DepthChanged || (_text.zIndex != x);_text.zIndex = x;}, get:function(){return _text.zIndex;}});
+			
 			_text.align = function(a, b){b=b||100;switch(a){case 'center':_text.anchor.x = 0.5;_text.anchor.y = 0.5;return;case 'left':_text.anchor.x = 1-b/100;return;case 'right':_text.anchor.x = b/100;return;case 'top':_text.anchor.y = 1-b/100;return;case 'bottom':_text.anchor.y = b/100;return;}};
 			_text.destroy = function(){app.stage.removeChild(_text);}
 			_text.x = x || 0;
@@ -513,7 +514,7 @@ var GMJS = new (function(){'use strict';
 				})[0],
 				txp = tx;
 			
-			if(tx.duplicate){
+			if(tx != undefined && tx.duplicate){
 				tx = TexList.filter((ii)=>{
 						return (ii.path == txp.path && !ii.duplicate);
 					})[0];
@@ -546,9 +547,11 @@ var GMJS = new (function(){'use strict';
 			t.sprite.anchor.x = obj.origin.x;
 			t.sprite.anchor.y = obj.origin.y;
 			t.sprite.renderable = false;
-			t.depth = depth;
 			
 			app.stage.addChild(t.sprite);
+			app.stage.addChild(t.sprite);
+			
+			t.depth = depth;
 			
 			t.graphics = new Graphics();
 			t.graphics.zIndex = depth;
@@ -575,6 +578,8 @@ var GMJS = new (function(){'use strict';
 			Object.defineProperty(t, 'image_single', {get:function(){return image_single;}, set:(!!t.sprite.play)?function(x){image_single = x;if(x == -1) t.sprite.play(); else t.sprite.gotoAndStop(x);}:function(){}});
 			Object.defineProperty(t, 'image_index', {get:function(){return (!!t.sprite.play)?t.sprite.currentFrame:0;}, set:function(){}});
 			Object.defineProperty(t, 'image_number', {get:function(){return (!!t.sprite.play)?t.sprite.totalFrames:1;}, set:function(){}});
+			Object.defineProperty(t, 'image_width', {get:function(){return texture==null?0:t.sprite._texture.width;}, set:function(){}});
+			Object.defineProperty(t, 'image_height', {get:function(){return texture==null?0:t.sprite._texture.height;}, set:function(){}});
 			
 			updateMask();
 			t.x = x;t.y = y; //Set new x,y coordinate
@@ -668,7 +673,7 @@ var GMJS = new (function(){'use strict';
 			}
 			
 			t.sprite = new TilingSprite(texture,This.room.width, This.room.height);
-			t.sprite.zIndex = 9999999999;
+			t.sprite.zIndex = 9999999;
 			
 			t.x = ('position' in args)?args.position.x || 0:0;
 			t.y = ('position' in args)?args.position.y || 0:0;
@@ -676,6 +681,7 @@ var GMJS = new (function(){'use strict';
 			t.origin.y = ('origin' in args)?args.origin.y || 0:0;
 			
 			app.stage.addChild(t.sprite);
+			_DepthChanged = true;
 			
 			t.destroy = function(){
 				app.stage.removeChild(t.sprite);
