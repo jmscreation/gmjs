@@ -485,15 +485,17 @@ var GMJS = new (function(){'use strict';
 			t.step_code = function(){
 				if(_destroy) return;
 				t.graphics.clear();
-				t.xprevious = t.x;
-				t.yprevious = t.y;
 				if(!t.sprite.renderable) t.sprite.renderable = true;
 				t.inherited = function(){};
 				for(var a in obj.alarms){//Alarm Event
 					t[obj.alarms[a].name]._run_step();
 				}
+				
 				t.inherited = obj.parent?obj.parent.obj_step.bind(t,t):function(){};
 				obj.obj_step(t);//Step Event
+				
+				t.xprevious = t.x;
+				t.yprevious = t.y;
 			};
 			t.end_step_code = function(){
 				if(_destroy){
