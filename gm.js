@@ -207,6 +207,28 @@ var GMJS = new (function(){'use strict';
 		touch = new nimble.Touch(app.view),
 		object_table = [];
 		
+		
+		/////////////Temporary Fix For Apple Mobile Devices/////////////
+		/*
+			Touch for Apple iOS devices does not work with the Nimble-JS Library
+			This temporary code can be removed when Nimble is updated to support Apple iOS touch support
+		*/
+		
+		var ATouch = {}, AOnTouch = {}, AOffTouch = {};
+		window.addEventListener('touchstart', (e)=>{
+			ATouch = {x:e.touches[0].clientX, y:e.touches[0].clientY};
+			AOnTouch = ATouch;
+			setTimeout(()=>{AOnTouch = null;}, 20);
+		});
+		window.addEventListener('touchend', (e)=>{
+			AOffTouch = ATouch;
+			ATouch = null;
+			setTimeout(()=>{AOffTouch = null;}, 20);
+		});
+		
+		///////////////////////////////////////////////////////////////
+		
+		
 		keyboard.steps = true;
 		mouse.steps = true;
 		touch.steps = true;
@@ -332,15 +354,15 @@ var GMJS = new (function(){'use strict';
 		},
 		mouse_check = function(mb){
 			if(mb != 'left' && mb != 'right' && mb != 'middle') return false;
-			return mouse[mb] || (mb == 'left' ? !!touch.fingers[0] : false);
+			return mouse[mb] || (mb == 'left' ? !!touch.fingers[0] || ATouch!==null : false); //**ATouch** Nimble Issue
 		},
 		mouse_check_pressed = function(mb){
 			mb = mb||'left';
-			return !!mouse.pressed[mb] || !!touch.pressed[0];
+			return !!mouse.pressed[mb] || !!touch.pressed[0] || AOnTouch; //**AOnTouch** Nimble Issue
 		},
 		mouse_check_released = function(mb){
 			mb = mb||'left';
-			return !!mouse.released[mb] || !!touch.released[0];
+			return !!mouse.released[mb] || !!touch.released[0] || AOffTouch; // //**AOffTouch** Nimble Issue
 		},
 		mouse_click = function(t, op, mb){
 			mb = mb||'left';
@@ -500,9 +522,9 @@ var GMJS = new (function(){'use strict';
 			t.end_step_code = function(){
 				if(_destroy){
 					var i = obj.instances.indexOf(t);
-					if(i > -1) obj.instances.splice(i , 1);
+					if(i > -1) obj.instances.splice(i, 1);
 					i = AllInstances.indexOf(t);
-					if(i > -1) AllInstances.splice(i , 1);
+					if(i > -1) AllInstances.splice(i, 1);
 					app.stage.removeChild(t.sprite);
 					app.stage.removeChild(t.graphics);
 					return;
@@ -831,6 +853,12 @@ var GMJS = new (function(){'use strict';
 					This.mouse_x = (touch.fingers[0].x + This.view.x)*app.stage.scale.x;
 					This.mouse_y = (touch.fingers[0].y + This.view.y)*app.stage.scale.y;
 				}
+				////////////Nimble Issue////////
+				if(ATouch !== null){
+					This.mouse_x = (ATouch.x + This.view.x)*app.stage.scale.x;
+					This.mouse_y = (ATouch.y + This.view.y)*app.stage.scale.y;
+				}
+				////////////////////////////////
 			} else {
 				This.mouse_x = (mouse.x + This.view.x)*app.stage.scale.x;
 				This.mouse_y = (mouse.y + This.view.y)*app.stage.scale.y;
@@ -926,6 +954,7 @@ var GMJS = new (function(){'use strict';
 			function launchGame(){
 				document.body.removeChild(loadingScreen.view); // 
 				loadingScreen.destroy(); // destroy loading screen object
+				loadingScreen = null; // de-reference loading screen
 				//Create game on screen
 				document.body.appendChild(app.view);
 				GameStart();
