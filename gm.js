@@ -1,6 +1,6 @@
 /* ------------------------------------------ //
 					GM-JS
-			Version: 0.6.10
+			Version: 0.6.11
 			Author: jmscreator
 			License: Free to use (See GPL License)
 			
@@ -26,7 +26,6 @@ var GMJS = new (function(){'use strict';
 		TextureCache = PIXI.utils.TextureCache,
 		Texture = PIXI.Texture,
 		BaseTexture = PIXI.BaseTexture,
-		Sound = PIXI.sound,
 		ConstructLoader = PIXI.Loader,
 		loader = PIXI.Loader.shared,
 		resources = PIXI.Loader.shared.resources;
@@ -189,7 +188,6 @@ var GMJS = new (function(){'use strict';
 				document.fonts.add(fnt);
 				fontsLoaded++;
 			});
-			//loader.add(i.name, i.path); //Preload
 		}
 		//Import Sounds
 		for(let snd of Sounds){
@@ -287,7 +285,7 @@ var GMJS = new (function(){'use strict';
 			_text.destroy = function(){app.stage.removeChild(_text);}
 			_text.x = x || 0;
 			_text.y = y || 0;
-			if(load_progress[0].progress != 100){
+			if(loadingScreen != null){
 				loadingScreen.stage.addChild(_text);
 			} else {
 				app.stage.addChild(_text);
@@ -325,13 +323,15 @@ var GMJS = new (function(){'use strict';
 		sound_play = function(snd, opt){
 			opt = opt || {};
 			//return Sound.play(snd, opt); //Not loaded
-			if(!resources[snd].sound) return {};
+			if(!resources[snd] || !resources[snd].sound) return null;
 			return resources[snd].sound.play(opt); //Pre-loaded
 		},
 		sound_volume = function(snd, vol){
+			if(!resources[snd] || !resources[snd].sound) return -1;
 			return resources[snd].sound.volume = vol;
 		},
 		sound_length = function(snd){
+			if(!resources[snd] || !resources[snd].sound) return -1;
 			return resources[snd].sound.duration;
 		},
 		_with = function(obj, scope){
@@ -545,7 +545,7 @@ var GMJS = new (function(){'use strict';
 			}
 			var texture = null;
 			
-			if(tx != undefined){
+			if(tx != undefined && tx.texture != undefined){
 				texture = tx.texture;
 				if(!texture.length) texture = [texture];
 			}
@@ -688,16 +688,34 @@ var GMJS = new (function(){'use strict';
 			Object.defineProperty(t.origin, 'x', {get:function(){return origin.x;}, set:function(v){origin.x = v;t.sprite.tilePosition.x = v;}});
 			Object.defineProperty(t.origin, 'y', {get:function(){return origin.y;}, set:function(v){origin.y = v;t.sprite.tilePosition.y = v;}});
 			
-			var texture;
-			for(var tx in TexList){
-				if(TexList[tx].name == t.image){
-					texture = TexList[tx].texture;
-					break;
-				}
+			var tx = TexList.filter((ii)=>{
+					return ii.name == t.image;
+				})[0],
+				txp = tx;
+			
+			if(tx != undefined && tx.duplicate){
+				tx = TexList.filter((ii)=>{
+						return (ii.path == txp.path && !ii.duplicate);
+					})[0];
+			}
+			var texture = null;
+			
+			if(tx != undefined && tx.texture != undefined){
+				texture = tx.texture;
+			}
+				
+			if(!texture) {
+				console.warn('background created with non-existent texture:', t.image);
+				texture = null;
 			}
 			
-			t.sprite = new TilingSprite(texture,This.room.width, This.room.height);
-			t.sprite.zIndex = 9999999;
+			if(t.image != '' && texture != null){
+				t.sprite = new TilingSprite(texture,This.room.width, This.room.height);
+				t.sprite.zIndex = 9999999;
+			}
+			else {
+				t.sprite = new TilingSprite('');
+			}
 			
 			t.x = ('position' in args)?args.position.x || 0:0;
 			t.y = ('position' in args)?args.position.y || 0:0;
@@ -953,7 +971,7 @@ var GMJS = new (function(){'use strict';
 			
 			function launchGame(){
 				document.body.removeChild(loadingScreen.view); // 
-				loadingScreen.destroy(); // destroy loading screen object
+				loadingScreen.destroy(true); // destroy loading screen object
 				loadingScreen = null; // de-reference loading screen
 				//Create game on screen
 				document.body.appendChild(app.view);
