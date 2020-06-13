@@ -205,29 +205,8 @@ var GMJS = new (function(){'use strict';
 		keyboard = new nimble.Keyboard(),
 		mouse = new nimble.Mouse(app.view),
 		touch = new nimble.Touch(app.view),
+		finger = null,
 		object_table = [];
-		
-		
-		/////////////Temporary Fix For Apple Mobile Devices/////////////
-		/*
-			Touch for Apple iOS devices does not work with the Nimble-JS Library
-			This temporary code can be removed when Nimble is updated to support Apple iOS touch support
-		*/
-		
-		var ATouch = {}, AOnTouch = {}, AOffTouch = {};
-		window.addEventListener('touchstart', (e)=>{
-			ATouch = {x:e.touches[0].clientX, y:e.touches[0].clientY};
-			AOnTouch = ATouch;
-			setTimeout(()=>{AOnTouch = null;}, 20);
-		});
-		window.addEventListener('touchend', (e)=>{
-			AOffTouch = ATouch;
-			ATouch = null;
-			setTimeout(()=>{AOffTouch = null;}, 20);
-		});
-		
-		///////////////////////////////////////////////////////////////
-		
 		
 		keyboard.steps = true;
 		mouse.steps = true;
@@ -354,15 +333,15 @@ var GMJS = new (function(){'use strict';
 		},
 		mouse_check = function(mb){
 			if(mb != 'left' && mb != 'right' && mb != 'middle') return false;
-			return mouse[mb] || (mb == 'left' ? !!touch.fingers[0] || ATouch!==null : false); //**ATouch** Nimble Issue
+			return mouse[mb] || (mb == 'left' ? finger : false);
 		},
 		mouse_check_pressed = function(mb){
 			mb = mb||'left';
-			return !!mouse.pressed[mb] || !!touch.pressed[0] || AOnTouch; //**AOnTouch** Nimble Issue
+			return !!mouse.pressed[mb] || touch.pressed.length;
 		},
 		mouse_check_released = function(mb){
 			mb = mb||'left';
-			return !!mouse.released[mb] || !!touch.released[0] || AOffTouch; // //**AOffTouch** Nimble Issue
+			return !!mouse.released[mb] || touch.released.length;
 		},
 		mouse_click = function(t, op, mb){
 			mb = mb||'left';
@@ -849,16 +828,15 @@ var GMJS = new (function(){'use strict';
 		function mainLoop(delta){
 			//Update Mouse Coords
 			if(mouse.x < 0 || mouse.y < 0){
-				if(!!touch.fingers[0]){
-					This.mouse_x = (touch.fingers[0].x + This.view.x)*app.stage.scale.x;
-					This.mouse_y = (touch.fingers[0].y + This.view.y)*app.stage.scale.y;
+
+				finger = null;
+				for(let f in touch.fingers) { finger = touch.fingers[f]; break; }
+
+				if(finger){
+					This.mouse_x = (finger.x + This.view.x)*app.stage.scale.x;
+					This.mouse_y = (finger.y + This.view.y)*app.stage.scale.y;
 				}
-				////////////Nimble Issue////////
-				if(ATouch !== null){
-					This.mouse_x = (ATouch.x + This.view.x)*app.stage.scale.x;
-					This.mouse_y = (ATouch.y + This.view.y)*app.stage.scale.y;
-				}
-				////////////////////////////////
+
 			} else {
 				This.mouse_x = (mouse.x + This.view.x)*app.stage.scale.x;
 				This.mouse_y = (mouse.y + This.view.y)*app.stage.scale.y;
@@ -892,14 +870,14 @@ var GMJS = new (function(){'use strict';
 				app.stage.updateLayersOrder();
 				_DepthChanged = false;
 			}
-			
+
 			//Global Step
 			EndStep();
 			//Update Keyboard/Mouse
 			keyboard.stepclear();
 			mouse.stepclear();
 			touch.stepclear();
-			
+
 		}
 
 		function publish(){
