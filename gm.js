@@ -1,6 +1,6 @@
 /* ------------------------------------------ //
 					GM-JS
-			Version: 0.6.11
+			Version: 0.6.12
 			Author: jmscreator
 			License: Free to use (See GPL License)
 			
@@ -547,11 +547,8 @@ var GMJS = new (function(){'use strict';
 				t.sprite.animationSpeed = 0.5;
 				t.sprite.play();
 			}
-			t.sprite.anchor.x = obj.origin.x;
-			t.sprite.anchor.y = obj.origin.y;
 			t.sprite.renderable = false;
 			
-			app.stage.addChild(t.sprite);
 			app.stage.addChild(t.sprite);
 			
 			t.depth = depth;
@@ -578,6 +575,8 @@ var GMJS = new (function(){'use strict';
 			Object.defineProperty(t, 'yscale', {get:function(){return yscale;}, set:function(x){yscale= x;t.sprite.scale.y = x;if(!obj.mask) updateMask();}});
 			Object.defineProperty(t, 'x', {get:function(){return x;}, set:function(v){x = v;t.sprite.x = v; t.mask.x = v + t.mask.xoff;}});
 			Object.defineProperty(t, 'y', {get:function(){return y;}, set:function(v){y = v;t.sprite.y = v; t.mask.y = v + t.mask.yoff;}});
+			Object.defineProperty(t, 'xorigin', {get:function(){return t.sprite.anchor.x;}, set:function(v){t.sprite.anchor.x = v;}});
+			Object.defineProperty(t, 'yorigin', {get:function(){return t.sprite.anchor.y;}, set:function(v){t.sprite.anchor.y = v;}});
 			Object.defineProperty(t, 'image_single', {get:function(){return image_single;}, set:(!!t.sprite.play)?function(x){image_single = x;if(x == -1) t.sprite.play(); else t.sprite.gotoAndStop(x);}:function(){}});
 			Object.defineProperty(t, 'image_index', {get:function(){return (!!t.sprite.play)?t.sprite.currentFrame:0;}, set:function(){}});
 			Object.defineProperty(t, 'image_number', {get:function(){return (!!t.sprite.play)?t.sprite.totalFrames:1;}, set:function(){}});
@@ -585,6 +584,8 @@ var GMJS = new (function(){'use strict';
 			Object.defineProperty(t, 'image_height', {get:function(){return texture==null?0:t.sprite._texture.height;}, set:function(){}});
 			
 			updateMask();
+			t.xorigin = obj.origin.x;
+			t.yorigin = obj.origin.y;
 			t.x = x;t.y = y; //Set new x,y coordinate
 			
 			opt = opt || null;
