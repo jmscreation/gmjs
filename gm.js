@@ -183,7 +183,7 @@ var GMJS = new (function(){'use strict';
 			if(!('path' in font)) {console.error('Failed loading font resource - ', font);continue;}
 			if(!('name' in font)) {console.error('Failed to load a font resource with no name - ');continue;}
 			//font = {name:'', path:''};
-			var obj = new FontFace(font.name, "url('"+font.path+"')", {});
+			var obj = new FontFace(font.name, "url('"+font.path+"')", font.options || {});
 			obj.load().then(fnt=>{
 				document.fonts.add(fnt);
 				fontsLoaded++;
@@ -370,7 +370,10 @@ var GMJS = new (function(){'use strict';
 				var _t=r1; r1=r2; r2=_t;
 			}
 			if(!('radius' in r1)) {
+				
+				let r1a = r1.angle * dtr, r2a = r2.angle * dtr; // get angle of mask in radians
 				return (Math.abs(r1.x-r2.x)<(r1.width+r2.width)/2 && Math.abs(r1.y-r2.y)<(r1.height+r2.height)/2);
+				
 			} else if(!('radius' in r2)) {
 				var vx=r1.x-r2.x, vy=r1.y-r2.y, dx=Math.abs(vx), dy=Math.abs(vy), wd=r1.radius+r2.width/2, hd=r1.radius+r2.height/2, ccx,ccy;
 				return (dx<r2.width/2 && dy<hd) || (dy<r2.height/2 && dx<wd) || (ccx=Math.sign(vx)*r2.width/2,ccy=Math.sign(vy)*r2.height/2,(vx-ccx)**2 + (vy-ccy)**2 < r1.radius**2);
@@ -440,11 +443,16 @@ var GMJS = new (function(){'use strict';
 				if(!!obj.mask){
 					m.xoff = obj.mask.x;
 					m.yoff = obj.mask.y;
-					if('radius' in obj.mask)
+					if('radius' in obj.mask){
 						m.width = m.height = (m.radius = obj.mask.radius)*2;
-					else 
-						{m.width = obj.mask.w;m.height = obj.mask.h;}
-				} else {m.width = t.sprite.width;m.height = t.sprite.height;}
+					} else {
+						m.width = obj.mask.w;
+						m.height = obj.mask.h;
+					}
+				} else {
+					m.width = t.sprite.width * t.xscale;
+					m.height = t.sprite.height * t.yscale;
+				}
 			}
 			
 			Object.defineProperty(t, 'object_index', {value:obj, writeable:false});
@@ -454,7 +462,7 @@ var GMJS = new (function(){'use strict';
 			t.destroyed = false;
 			t.xprevious = x;
 			t.yprevious = y;
-			t.mask = {xoff:0, yoff:0};
+			t.mask = {xoff:0, yoff:0, angle:0};
 			t.collision_objects = [];
 			
 			for(var a in obj.alarms){
@@ -570,7 +578,7 @@ var GMJS = new (function(){'use strict';
 			
 			Object.defineProperty(t, 'id', {get:function(){return instanceid;}, set:function(){}});
 			Object.defineProperty(t, 'image_alpha', {get:function(){return image_alpha;}, set:function(x){image_alpha = Math.max(Math.min(x, 1), 0);t.sprite.alpha = image_alpha;}});
-			Object.defineProperty(t, 'image_angle', {get:function(){return image_angle;}, set:function(x){image_angle = x;t.sprite.rotation = (image_angle)*dtr;}});
+			Object.defineProperty(t, 'image_angle', {get:function(){return image_angle;}, set:function(x){image_angle = x;t.sprite.rotation = (image_angle)*dtr; if(!obj.mask) updateMask()}});
 			Object.defineProperty(t, 'xscale', {get:function(){return xscale;}, set:function(x){xscale = x;t.sprite.scale.x = x;if(!obj.mask) updateMask();}});
 			Object.defineProperty(t, 'yscale', {get:function(){return yscale;}, set:function(x){yscale= x;t.sprite.scale.y = x;if(!obj.mask) updateMask();}});
 			Object.defineProperty(t, 'x', {get:function(){return x;}, set:function(v){x = v;t.sprite.x = v; t.mask.x = v + t.mask.xoff;}});
