@@ -1,6 +1,6 @@
 /* ------------------------------------------ //
 					GM-JS
-			Version: 0.6.12
+			Version: 0.6.15
 			Author: jmscreator
 			License: Free to use (See GPL License)
 			
@@ -125,12 +125,8 @@ var GMJS = new (function(){'use strict';
 				tx.frame = (new Rectangle(tile.x, tile.y, tile.w, tile.h));return true;
 			}
 			for(var img in list){
-				var i = list[img];
+				var i = list[img], tex;
 				if(TextureCache[i.path] == undefined) {console.error('Failed loading resource - '+i.name+' - Image file not found');continue;}
-				var tex = new Texture(BaseTexture.from(i.path)); // Generate New Texture
-				if('tile' in i){
-					if(!createFrame(tex, i.tile)) {console.error('Failed creating frame for - '+i.name); continue;}
-				}
 				
 				if('animated' in i){
 					tex = [];
@@ -149,7 +145,13 @@ var GMJS = new (function(){'use strict';
 						tile = {x:(xoff+(w+xsep)*xx), y:(yoff+(h+ysep)*yy), w:w, h:h};
 						createFrame(tx, tile);
 					}
+				} else {
+					tex = new Texture(BaseTexture.from(i.path)); // Generate New Texture
+					if('tile' in i){
+						if(!createFrame(tex, i.tile)) {console.error('Failed creating frame for - '+i.name); continue;}
+					}
 				}
+
 				i.texture = tex;
 			}
 		}
@@ -644,6 +646,23 @@ var GMJS = new (function(){'use strict';
 			t.mask = ('mask' in args)?args.mask:((t.parent)?t.parent.mask:null);
 			//////-------------------------------------------//////
 			
+			// Object only properties
+			let tx = TexList.filter((ii)=>{
+					return ii.name == t.image;
+				})[0],
+				txp = tx;
+
+			if(tx != undefined && tx.duplicate){
+				tx = TexList.filter((ii)=>{
+						return (ii.path == txp.path && !ii.duplicate);
+					})[0];
+			}
+			t.texture = tx;
+			Object.defineProperty(t, 'image_width', {get:function(){return !tx ? 0: (tx.animated ? tx.animated.w : tx.texture.width);}, set:function(){}});
+			Object.defineProperty(t, 'image_height', {get:function(){return !tx ? 0: (tx.animated ? tx.animated.h : tx.texture.height);}, set:function(){}});
+			Object.defineProperty(t, 'image_number', {get:function(){return !tx ? 0: (tx.animated ? tx.animated.count : 1);}, set:function(){}});
+			//////-------------------------------------------//////
+
 			if(t.parent){
 				[].push.apply(t.alarms, t.parent.alarms);//Inherit Alarms
 				var pt,cobs=t.collision.map(o=>o.object);for(var i in t.parent.collision)cobs.includes((pt=t.parent.collision[i]).object)||t.collision.push(pt);//Inherit Collision
@@ -717,7 +736,7 @@ var GMJS = new (function(){'use strict';
 				app.stage.removeChild(t.sprite);
 			}
 		},
-		resource_add = function(args, onComplete = ()=>{}){
+		resource_add = function(args, onComplete = ()=>{}, onError = ()=>{}){
 			var list = [];
 			if(!args.length) throw new Error("resource_add() Must be given an array of resources! Example: [ {name:'', path:'', type:<RES_TYPE>}, ... ]");
 			if(isLoading) return false;
@@ -774,7 +793,7 @@ var GMJS = new (function(){'use strict';
 				}
 			}
 			loader.on('error', function(){
-				reject();
+				onError();
 				throw new Error('Failed loading a resource via resource_add()');
 			});
 			loader.load(function(){
@@ -790,8 +809,15 @@ var GMJS = new (function(){'use strict';
 		},
 		resource_get = function(name){
 			return resources[name];
+		},
+		resource_free = function(name){
+			let res = resources[name];
+			if(res !== undefined){
+				if(res.sound) res.sound.destroy();
+				if(res.texture) res.texture.destroy();
+				delete resources[name];
+			}
 		};
-
 		//-----Loading Screen
 		(function(){
 			var load_obj = [],
@@ -945,6 +971,7 @@ var GMJS = new (function(){'use strict';
 			This.create_text_style = create_text_style;
 			This.resource_add = resource_add;
 			This.resource_get = resource_get;
+			This.resource_free = resource_free;
 			This.resource_list = ()=>resources;
 			This.setFPS = (fps)=>{app.ticker.maxFPS = fps;};
 		}
