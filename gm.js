@@ -1,6 +1,6 @@
 /* ------------------------------------------ //
 					GM-JS
-			Version: 0.6.15
+			Version: 0.6.16
 			Author: jmscreator
 			License: Free to use (See GPL License)
 			
@@ -367,19 +367,60 @@ var GMJS = new (function(){'use strict';
 			dir *= dtr;return [Math.cos(dir), -Math.sin(dir)];
 		},
 		checkCollision = function(r1, r2){
-			if(r1 === r2) return false;
-			if('radius' in r2 && !('radius' in r1)) {
+			/*
+				r1: Mask, r2: Mask
+				Mask: {x:number, y:number, radius:number} | {x:number, y:number, width:number, height:number, angle:number & degrees}
+			*/
+			if(r1 === r2) return false; // mask doesn't collide with itself
+			if('radius' in r2 && !('radius' in r1)) { // put circle mask first
 				var _t=r1; r1=r2; r2=_t;
 			}
-			if(!('radius' in r1)) {
-				
-				let r1a = r1.angle * dtr, r2a = r2.angle * dtr; // get angle of mask in radians
-				return (Math.abs(r1.x-r2.x)<(r1.width+r2.width)/2 && Math.abs(r1.y-r2.y)<(r1.height+r2.height)/2);
-				
-			} else if(!('radius' in r2)) {
+			if(!('radius' in r1)) { // rect - rect collision
+				let r1a = (r1.angle%180+180)%180 * dtr, r2a = (r2.angle%180+180)%180 * dtr; // get angle of mask in radians
+				if(r1a === 0 && r2a === 0) {
+					return (Math.abs(r1.x-r2.x)<(r1.width+r2.width)/2 && Math.abs(r1.y-r2.y)<(r1.height+r2.height)/2);
+				} else {
+					let v1x = Math.cos(r1a), v1y = Math.sin(r1a), v2x = Math.cos(r2a), v2y = Math.sin(r2a), v1,v2,v3,v4, mn,mx;
+					// rect1 projections
+					// rect1 x-axis test
+					v1 = (r2.x + (-v2x*r2.width + v2y*r2.height)/2 - r1.x)*v1x + (r2.y + (-v2y*r2.width - v2x*r2.height)/2 - r1.y)*v1y; // top-left
+					v2 = (r2.x + (v2x*r2.width + v2y*r2.height)/2 - r1.x)*v1x + (r2.y + (v2y*r2.width - v2x*r2.height)/2 - r1.y)*v1y; // top-right
+					v3 = (r2.x + (-v2x*r2.width - v2y*r2.height)/2 - r1.x)*v1x + (r2.y + (-v2y*r2.width + v2x*r2.height)/2 - r1.y)*v1y; // bottom-left
+					v4 = (r2.x + (v2x*r2.width - v2y*r2.height)/2 - r1.x)*v1x + (r2.y + (v2y*r2.width + v2x*r2.height)/2 - r1.y)*v1y; // bottom-right
+					mn = Math.min(v1,v2,v3,v4); mx = Math.max(v1,v2,v3,v4);
+					if(mn >= r1.width/2 || mx <= -r1.width/2) return false; // projection lines intersect
+					// rect1 y-axis test
+					v1 = (r2.x + (-v2x*r2.width + v2y*r2.height)/2 - r1.x)*-v1y + (r2.y + (-v2y*r2.width - v2x*r2.height)/2 - r1.y)*v1x; // top-left
+					v2 = (r2.x + (v2x*r2.width + v2y*r2.height)/2 - r1.x)*-v1y + (r2.y + (v2y*r2.width - v2x*r2.height)/2 - r1.y)*v1x; // top-right
+					v3 = (r2.x + (-v2x*r2.width - v2y*r2.height)/2 - r1.x)*-v1y + (r2.y + (-v2y*r2.width + v2x*r2.height)/2 - r1.y)*v1x; // bottom-left
+					v4 = (r2.x + (v2x*r2.width - v2y*r2.height)/2 - r1.x)*-v1y + (r2.y + (v2y*r2.width + v2x*r2.height)/2 - r1.y)*v1x; // bottom-right
+					mn = Math.min(v1,v2,v3,v4); mx = Math.max(v1,v2,v3,v4);
+					if(mn >= r1.height/2 || mx <= -r1.height/2) return false; // projection lines intersect
+					
+					if(r1a === r2a) return true;
+					
+					// rect2 projections
+					// rect2 x-axis test
+					v1 = (r1.x + (-v1x*r1.width + v1y*r1.height)/2 - r2.x)*v2x + (r1.y + (-v1y*r1.width - v1x*r1.height)/2 - r2.y)*v2y; // top-left
+					v2 = (r1.x + (v1x*r1.width + v1y*r1.height)/2 - r2.x)*v2x + (r1.y + (v1y*r1.width - v1x*r1.height)/2 - r2.y)*v2y; // top-right
+					v3 = (r1.x + (-v1x*r1.width - v1y*r1.height)/2 - r2.x)*v2x + (r1.y + (-v1y*r1.width + v1x*r1.height)/2 - r2.y)*v2y; // bottom-left
+					v4 = (r1.x + (v1x*r1.width - v1y*r1.height)/2 - r2.x)*v2x + (r1.y + (v1y*r1.width + v1x*r1.height)/2 - r2.y)*v2y; // bottom-right
+					mn = Math.min(v1,v2,v3,v4); mx = Math.max(v1,v2,v3,v4);
+					if(mn >= r2.width/2 || mx <= -r2.width/2) return false; // projection lines intersect
+					// rect2 y-axis test
+					v1 = (r1.x + (-v1x*r1.width + v1y*r1.height)/2 - r2.x)*-v2y + (r1.y + (-v1y*r1.width - v1x*r1.height)/2 - r2.y)*v2x; // top-left
+					v2 = (r1.x + (v1x*r1.width + v1y*r1.height)/2 - r2.x)*-v2y + (r1.y + (v1y*r1.width - v1x*r1.height)/2 - r2.y)*v2x; // top-right
+					v3 = (r1.x + (-v1x*r1.width - v1y*r1.height)/2 - r2.x)*-v2y + (r1.y + (-v1y*r1.width + v1x*r1.height)/2 - r2.y)*v2x; // bottom-left
+					v4 = (r1.x + (v1x*r1.width - v1y*r1.height)/2 - r2.x)*-v2y + (r1.y + (v1y*r1.width + v1x*r1.height)/2 - r2.y)*v2x; // bottom-right
+					mn = Math.min(v1,v2,v3,v4); mx = Math.max(v1,v2,v3,v4);
+					if(mn >= r2.height/2 || mx <= -r2.height/2) return false; // projection lines intersect
+					
+					return true;
+				}
+			} else if(!('radius' in r2)) { // rect - circle collision
 				var vx=r1.x-r2.x, vy=r1.y-r2.y, dx=Math.abs(vx), dy=Math.abs(vy), wd=r1.radius+r2.width/2, hd=r1.radius+r2.height/2, ccx,ccy;
 				return (dx<r2.width/2 && dy<hd) || (dy<r2.height/2 && dx<wd) || (ccx=Math.sign(vx)*r2.width/2,ccy=Math.sign(vy)*r2.height/2,(vx-ccx)**2 + (vy-ccy)**2 < r1.radius**2);
-			} else {
+			} else { // circle - circle collision
 				return (r1.x-r2.x)**2 + (r1.y-r2.y)**2 < (r1.radius+r2.radius)**2;
 			}
 		},
@@ -454,6 +495,7 @@ var GMJS = new (function(){'use strict';
 				} else {
 					m.width = t.sprite.width * t.xscale;
 					m.height = t.sprite.height * t.yscale;
+					m.angle = t.image_angle;
 				}
 			}
 			
@@ -571,16 +613,17 @@ var GMJS = new (function(){'use strict';
 				t.graphics.moveTo(x, y);
 				t.graphics.lineTo(xx, yy);
 			}
-			t.graphics.drawRectangle = function(x, y, w, h){
+			t.graphics.drawRectangle = function(x, y, w, h, dir){
 				t.graphics.beginFill(t.graphics.color);
 				t.graphics.drawRect(x, y, w, h);
+				t.graphics.angle = dir;
 			}
 			Object.defineProperty(t.graphics, 'depth', {get:function(){return t.graphics.zIndex;}, set:function(x){_DepthChanged = _DepthChanged || (t.graphics.zIndex != x);t.graphics.zIndex = x;}});
 			app.stage.addChild(t.graphics);
 			
 			Object.defineProperty(t, 'id', {get:function(){return instanceid;}, set:function(){}});
 			Object.defineProperty(t, 'image_alpha', {get:function(){return image_alpha;}, set:function(x){image_alpha = Math.max(Math.min(x, 1), 0);t.sprite.alpha = image_alpha;}});
-			Object.defineProperty(t, 'image_angle', {get:function(){return image_angle;}, set:function(x){image_angle = x;t.sprite.rotation = (image_angle)*dtr; if(!obj.mask) updateMask()}});
+			Object.defineProperty(t, 'image_angle', {get:function(){return image_angle;}, set:function(x){image_angle = x;t.sprite.angle = image_angle; if(!obj.mask) updateMask()}});
 			Object.defineProperty(t, 'xscale', {get:function(){return xscale;}, set:function(x){xscale = x;t.sprite.scale.x = x;if(!obj.mask) updateMask();}});
 			Object.defineProperty(t, 'yscale', {get:function(){return yscale;}, set:function(x){yscale= x;t.sprite.scale.y = x;if(!obj.mask) updateMask();}});
 			Object.defineProperty(t, 'x', {get:function(){return x;}, set:function(v){x = v;t.sprite.x = v; t.mask.x = v + t.mask.xoff;}});
