@@ -371,11 +371,20 @@ var GMJS = new (function(){'use strict';
 				r1: Mask, r2: Mask
 				Mask: {x:number, y:number, radius:number} | {x:number, y:number, width:number, height:number, angle:number & degrees}
 			*/
+			
+			if(!('angle' in r1)) r1.angle = 0; // if angle is not set, make sure to reset the angle to 0
+			if(!('angle' in r2)) r2.angle = 0;
+			
 			if(r1 === r2) return false; // mask doesn't collide with itself
 			if('radius' in r2 && !('radius' in r1)) { // put circle mask first
 				var _t=r1; r1=r2; r2=_t;
 			}
 			if(!('radius' in r1)) { // rect - rect collision
+				
+				/* If collision doesn't work, you can uncomment this code to revert to the original collision */
+				//return (Math.abs(r1.x-r2.x)<(r1.width+r2.width)/2 && Math.abs(r1.y-r2.y)<(r1.height+r2.height)/2);
+				/* ------------------------------------ */
+				
 				let r1a = (r1.angle%180+180)%180 * dtr, r2a = (r2.angle%180+180)%180 * dtr; // get angle of mask in radians
 				if(r1a === 0 && r2a === 0) {
 					return (Math.abs(r1.x-r2.x)<(r1.width+r2.width)/2 && Math.abs(r1.y-r2.y)<(r1.height+r2.height)/2);
@@ -484,13 +493,14 @@ var GMJS = new (function(){'use strict';
 			var updateMask = function(){
 				var m = t.mask;
 				if(!!obj.mask){
-					m.xoff = obj.mask.x;
-					m.yoff = obj.mask.y;
+					m.xoff = obj.mask.x === undefined ? 0 : obj.mask.x;
+					m.yoff = obj.mask.y === undefined ? 0 : obj.mask.y;
 					if('radius' in obj.mask){
 						m.width = m.height = (m.radius = obj.mask.radius)*2;
 					} else {
-						m.width = obj.mask.w;
-						m.height = obj.mask.h;
+						m.width = obj.mask.w === undefined ? t.sprite.width * t.xscale : obj.mask.w;
+						m.height = obj.mask.h === undefined ? t.sprite.height * t.yscale : obj.mask.h;
+						m.angle = obj.mask.angle === undefined ? t.image_angle : obj.mask.angle;
 					}
 				} else {
 					m.width = t.sprite.width * t.xscale;
